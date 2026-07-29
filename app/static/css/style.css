@@ -50,7 +50,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b0f17;
     --panel: #111827;
     --panel-subtle: #1f2937;
@@ -66,7 +66,7 @@
     
     --accent: #3b82f6;
     --accent-hover: #60a5fa;
-    --accent-ink: #0b0f17;
+    --accent-ink: #ffffff;
     --accent-soft: rgba(59, 130, 246, 0.15);
     --accent-glow: rgba(59, 130, 246, 0.35);
     
@@ -81,6 +81,70 @@
     --shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
     --shadow-lift: 0 12px 30px 0 rgba(0, 0, 0, 0.45);
   }
+}
+
+html[data-theme="dark"] {
+  --bg: #0b0f17;
+  --panel: #111827;
+  --panel-subtle: #1f2937;
+  --panel-hover: #1e293b;
+  
+  --ink: #f9fafb;
+  --ink-soft: #cbd5e1;
+  --muted: #9ca3af;
+  --muted-light: #6b7280;
+  
+  --line: #1f2937;
+  --line-strong: #374151;
+  
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(59, 130, 246, 0.15);
+  --accent-glow: rgba(59, 130, 246, 0.35);
+  
+  --ok: #34d399;
+  --ok-soft: rgba(52, 211, 153, 0.15);
+  --warn: #fbbf24;
+  --warn-soft: rgba(251, 191, 36, 0.15);
+  --err: #f87171;
+  --err-soft: rgba(248, 113, 113, 0.15);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
+  --shadow-lift: 0 12px 30px 0 rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="light"] {
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --panel-subtle: #f1f5f9;
+  --panel-hover: #f8fafc;
+  
+  --ink: #0f172a;
+  --ink-soft: #334155;
+  --muted: #64748b;
+  --muted-light: #94a3b8;
+  
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(37, 99, 235, 0.08);
+  --accent-glow: rgba(37, 99, 235, 0.25);
+  
+  --ok: #10b981;
+  --ok-soft: rgba(16, 185, 129, 0.1);
+  --warn: #f59e0b;
+  --warn-soft: rgba(245, 158, 11, 0.1);
+  --err: #dc2626;
+  --err-soft: rgba(239, 68, 68, 0.1);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lift: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 }
 
 /* Baseline Reset */
@@ -488,7 +552,7 @@ button, .button {
   font-size: 13.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--ink-soft);
+  color: var(--ink);
   background: var(--panel);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -496,6 +560,78 @@ button, .button {
   white-space: nowrap;
   box-shadow: var(--shadow-sm);
   transition: all 0.15s ease;
+}
+
+button svg, .button svg {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+  stroke-width: 2;
+  flex: 0 0 16px;
+}
+
+button:hover, .button:hover {
+  background: var(--panel-subtle);
+  border-color: var(--muted);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.theme-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 0;
+  min-height: 30px;
+  height: 30px;
+  width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none;
+}
+.theme-btn:hover {
+  background: var(--panel-subtle);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.sidebar-foot form {
+  margin: 0;
+}
+.sidebar-foot button, .sidebar-foot .button {
+  width: 100%;
+  justify-content: center;
+  min-height: 36px;
+  height: 36px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.sidebar-foot button.danger, .sidebar-foot .button.danger {
+  color: var(--err);
+  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--err-soft);
+}
+.sidebar-foot button.danger:hover, .sidebar-foot .button.danger:hover {
+  background: var(--err);
+  color: #ffffff;
+}
+
+.sidebar-foot button svg, .sidebar-foot .button svg {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  stroke-width: 2 !important;
+  flex: 0 0 16px !important;
 }
 
 button.button-sm, .button.button-sm {
