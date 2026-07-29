@@ -181,7 +181,8 @@
       Сверка заходит на приёмник и считает письма там, а не складывает наши счётчики переноса.
     </p>
 
-    <div hx-get="{{ url_for('projects.reconcile_progress', project_id=project.id) }}"
+    <div id="reconcile-progress"
+         hx-get="{{ url_for('projects.reconcile_progress', project_id=project.id) }}"
          hx-trigger="load, every 2s" hx-swap="innerHTML"></div>
   </div>
 
