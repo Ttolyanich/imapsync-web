@@ -48,12 +48,14 @@ def create_app() -> Flask:
     from app.routes.auth import bp as auth_bp
     from app.routes.endpoints import bp as endpoints_bp
     from app.routes.projects import bp as projects_bp
+    from app.routes.settings import bp as settings_bp
     from app.routes.wizard import bp as wizard_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(endpoints_bp)
     app.register_blueprint(wizard_bp)
+    app.register_blueprint(settings_bp)
 
     @app.errorhandler(403)
     def forbidden(_exc):

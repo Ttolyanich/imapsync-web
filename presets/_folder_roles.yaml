@@ -27,11 +27,15 @@ roles:
     - Отправленные
     - Отправленная почта
     - Исходящие
+    - "[Gmail]/Sent Mail"
+    - "[Gmail]/Отправленные"
     - "&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-"   # Отправленные в modified UTF-7
 
   drafts:
     - Drafts
     - Черновики
+    - "[Gmail]/Drafts"
+    - "[Gmail]/Черновики"
     - "&BCcENQRABD0EPgQyBDgEOgQ4-"
 
   trash:
@@ -41,6 +45,8 @@ roles:
     - Корзина
     - Удаленные
     - Удалённые
+    - "[Gmail]/Trash"
+    - "[Gmail]/Корзина"
     - "&BBoEPgRABDcEOAQ9BDA-"
 
   junk:
@@ -50,12 +56,19 @@ roles:
     - Bulk Mail
     - Spam
     - Спам
+    - "[Gmail]/Spam"
+    - "[Gmail]/Спам"
     - "&BCEEPwQwBDw-"
 
   archive:
+    # У Gmail «Вся почта» — это не архив, а весь ящик целиком: письмо видно
+    # и там, и в своём ярлыке. Переносить её вместе с ярлыками — значит
+    # раздуть объём в разы, поэтому по умолчанию она попадает в исключения.
     - Archive
     - Archives
     - Архив
+    - "[Gmail]/All Mail"
+    - "[Gmail]/Вся почта"
     - "&BBAEQATFBDgEMg-"
 
 # Папки, которые не переносим никогда: это не почта пользователя.

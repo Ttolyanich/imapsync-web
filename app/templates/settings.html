@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Настройки — imapsync-web{% endblock %}
+
+{% block content %}
+<h1>Настройки</h1>
+
+<div class="card" style="max-width:520px">
+  <h3>Мой пароль</h3>
+  <p class="small muted">
+    Пароль администратора из <code>.env</code> действует только при первом
+    запуске. Дальше он меняется здесь — иначе в файле на диске остался бы
+    вечный доступ, который нельзя отозвать.
+  </p>
+  <form method="post" action="{{ url_for('settings.change_password') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Текущий пароль
+      <input type="password" name="current_password" autocomplete="current-password" required>
+    </label>
+    <label>Новый пароль
+      <input type="password" name="new_password" autocomplete="new-password" required>
+    </label>
+    <label>Ещё раз
+      <input type="password" name="repeat_password" autocomplete="new-password" required>
+    </label>
+    <div class="actions"><button class="primary" type="submit">Сменить пароль</button></div>
+  </form>
+</div>
+
+{% if current_user().is_admin %}
+<div class="card">
+  <h3>Пользователи</h3>
+  <p class="small muted">
+    Оператор ведёт свои проекты целиком, а чужие видит, но не запускает и не
+    правит: миграции передают друг другу, и полная изоляция мешала бы больше,
+    чем защищала. Пароли почтовых ящиков не показываются никому, включая
+    администратора.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Логин</th><th>Роль</th><th>Создан</th><th>Последний вход</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="{{ '' if u.is_active else 'warn' }}">
+          <td>
+            <b>{{ u.username }}</b>
+            {% if u.is_me %}<span class="muted small">— это ты</span>{% endif %}
+            {% if not u.is_active %}<span class="badge warn">отключён</span>{% endif %}
+          </td>
+          <td>
+            <form method="post" action="{{ url_for('settings.change_role', user_id=u.id) }}"
+                  style="display:flex;gap:6px;align-items:center">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="role" style="width:auto">
+                {% for value, title in roles.items() %}
+                  <option value="{{ value }}" {{ 'selected' if u.role == value }}>{{ title }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit">Сменить</button>
+            </form>
+          </td>
+          <td class="small muted">{{ u.created_at | local_time('%d.%m.%Y') }}</td>
+          <td class="small muted">{{ u.last_login_at | local_time }}</td>
+          <td>
+            <div class="actions" style="margin:0">
+              <form method="post" action="{{ url_for('settings.reset_password', user_id=u.id) }}"
+                    onsubmit="return confirm('Сбросить пароль? Текущий перестанет работать.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Сбросить пароль</button>
+              </form>
+              {% if not u.is_me %}
+                <form method="post" action="{{ url_for('settings.toggle_user', user_id=u.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit">{{ 'Отключить' if u.is_active else 'Включить' }}</button>
+                </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Добавить пользователя</h3>
+  <form method="post" action="{{ url_for('settings.create_user') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row">
+      <label>Логин <input name="username" required></label>
+      <label>Роль
+        <select name="role">
+          {% for value, title in roles.items() %}
+            <option value="{{ value }}">{{ title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Пароль
+        <input type="password" name="password" autocomplete="new-password"
+               placeholder="оставь пустым — сгенерирую">
+      </label>
+    </div>
+    <div class="actions"><button class="primary" type="submit">Создать</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Журнал действий</h3>
+  <p class="small muted">
+    Для инструмента, который ходит в чужую почту, это не бюрократия, а ответ
+    на вопрос «кто качал ящик директора». Записи остаются, даже если
+    пользователя потом удалили.
+  </p>
+  <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+    <table>
+      <thead>
+        <tr><th>Когда</th><th>Кто</th><th>Что</th><th>Объект</th><th>Подробности</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td class="small muted" style="white-space:nowrap">{{ e.ts | local_time('%d.%m %H:%M') }}</td>
+          <td>{{ e.username }}</td>
+          <td>{{ e.action }}</td>
+          <td class="small muted">{{ e.target }}</td>
+          <td class="small muted">{{ e.details }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="muted">Пока пусто.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

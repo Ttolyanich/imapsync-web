@@ -203,6 +203,12 @@ class Mailbox(Base):
     done_messages: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     done_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    # Сверка: что реально лежит на приёмнике. Считать «доехало» по собственным
+    # счётчикам переноса — самообман; для отчёта опрашиваем сам приёмник.
+    dst_total_messages: Mapped[int | None] = mapped_column(Integer)
+    dst_total_bytes: Mapped[int | None] = mapped_column(Integer)
+    reconciled_at: Mapped[datetime | None] = mapped_column(DateTime)
+
     # Состояние переноса
     run_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     current_folder: Mapped[str | None] = mapped_column(String(1024))

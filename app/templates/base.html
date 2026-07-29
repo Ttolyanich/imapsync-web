@@ -22,6 +22,8 @@
          class="{{ 'active' if request.blueprint in ('projects', 'wizard') }}">Проекты</a>
       <a href="{{ url_for('endpoints.index') }}"
          class="{{ 'active' if request.blueprint == 'endpoints' }}">Серверы</a>
+      <a href="{{ url_for('settings.index') }}"
+         class="{{ 'active' if request.blueprint == 'settings' }}">Настройки</a>
     </nav>
     <div class="sidebar-foot">
       <div class="who">

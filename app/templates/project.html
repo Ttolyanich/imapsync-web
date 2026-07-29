@@ -67,8 +67,12 @@
 <div class="tabs">
   <a href="{{ url_for('projects.view', project_id=project.id, tab='mailboxes') }}"
      class="{{ 'active' if tab == 'mailboxes' }}">Ящики</a>
+  <a href="{{ url_for('projects.folders', project_id=project.id) }}"
+     class="{{ 'active' if tab == 'folders' }}">Папки</a>
   <a href="{{ url_for('projects.view', project_id=project.id, tab='log') }}"
      class="{{ 'active' if tab == 'log' }}">Лог</a>
+  <a href="{{ url_for('projects.view', project_id=project.id, tab='report') }}"
+     class="{{ 'active' if tab == 'report' }}">Отчёт</a>
   <a href="{{ url_for('projects.view', project_id=project.id, tab='settings') }}"
      class="{{ 'active' if tab == 'settings' }}">Настройки</a>
 </div>
@@ -78,6 +82,144 @@
        hx-get="{{ url_for('projects.mailboxes_partial', project_id=project.id) }}"
        hx-trigger="every 5s" hx-swap="innerHTML">
     {% include "partials/mailbox_table.html" %}
+  </div>
+
+{% elif tab == 'folders' %}
+  <div class="card">
+    <h3>Соответствие папок</h3>
+    <p class="small muted">
+      Таблица одна на весь проект: подтверждаешь её один раз, и она применяется
+      ко всем ящикам. Назначение папки берётся сначала из того, что объявил сам
+      сервер, и лишь потом угадывается по названию. Имя на приёмнике подставлено
+      из его пресета — благодаря этому на приёмнике не появятся одновременно
+      «Sent Items» и «Отправленные» с размазанными по ним письмами.
+    </p>
+
+    {% if not folder_rows %}
+      <div class="notice small">
+        Папки появятся здесь после проверки доступов: список берётся из
+        инвентаризации ящиков.
+      </div>
+    {% else %}
+      {% if not folders_confirmed %}
+        <div class="notice warn small">
+          Таблица ещё не подтверждена. Перенос будет работать и так — по этому
+          же предложению, — но лучше просмотреть его глазами до старта.
+        </div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('projects.save_folders', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Папка источника</th><th>Назначение</th><th>Что делаем</th>
+                <th>Папка приёмника</th><th>Ящиков</th><th>Писем</th><th>Объём</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in folder_rows %}
+              <tr class="{{ 'warn' if row.action == 'skip' }}">
+                <td>
+                  <b>{{ row.src_name }}</b>
+                  <div class="muted small">{{ row.reason }}</div>
+                </td>
+                <td class="small">
+                  {% if row.role_title %}<span class="badge">{{ row.role_title }}</span>
+                  {% else %}<span class="muted">своя папка</span>{% endif %}
+                </td>
+                <td>
+                  <select name="action__{{ row.src_name }}" {{ 'disabled' if not can_edit }}>
+                    <option value="map" {{ 'selected' if row.action == 'map' }}>переносить</option>
+                    <option value="skip" {{ 'selected' if row.action == 'skip' }}>пропустить</option>
+                  </select>
+                </td>
+                <td>
+                  <input name="dst__{{ row.src_name }}" value="{{ row.dst_name or '' }}"
+                         {{ 'disabled' if not can_edit }}>
+                </td>
+                <td>{{ row.mailboxes }}</td>
+                <td>{{ row.messages | human_count }}</td>
+                <td>{{ row.size_bytes | human_size }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if can_edit %}
+          <div class="actions">
+            <button class="primary" type="submit">Подтвердить соответствия</button>
+          </div>
+        {% endif %}
+      </form>
+    {% endif %}
+  </div>
+
+{% elif tab == 'report' %}
+  <div class="card">
+    <div class="page-head">
+      <h3 style="margin:0">Сверка с приёмником</h3>
+      <div class="actions" style="margin:0">
+        {% if can_edit %}
+          <form method="post" action="{{ url_for('projects.reconcile_start', project_id=project.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="primary" type="submit">Сверить</button>
+          </form>
+        {% endif %}
+        <a class="button" href="{{ url_for('projects.report_xlsx', project_id=project.id) }}">
+          Выгрузить xlsx
+        </a>
+      </div>
+    </div>
+
+    <p class="small muted">
+      Сверка заходит на приёмник и считает письма там, а не складывает наши
+      собственные счётчики переноса. Это принципиально: счётчики говорят,
+      сколько писем мы отправили, а не сколько долетело. Письмо могло быть
+      отвергнуто сервером, не пройти по размеру или попасть под политику
+      хранения — увидеть это можно только опросив приёмник.
+    </p>
+
+    <div hx-get="{{ url_for('projects.reconcile_progress', project_id=project.id) }}"
+         hx-trigger="load, every 2s" hx-swap="innerHTML"></div>
+  </div>
+
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Ящик</th><th>Было на источнике</th><th>Стало на приёмнике</th>
+          <th>Разница</th><th>Объём источника</th><th>Объём приёмника</th><th>Сверено</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="{{ 'warn' if r.gap is not none and r.gap < 0 }}">
+          <td>{{ r.src_email }}</td>
+          <td>{{ r.total_messages | human_count }}</td>
+          <td>{{ r.dst_total_messages | human_count }}</td>
+          <td>
+            {% if r.gap is none %}<span class="muted">—</span>
+            {% elif r.gap == 0 %}<span class="badge ok">сходится</span>
+            {% elif r.gap < 0 %}<span class="badge warn">{{ r.gap }}</span>
+            {% else %}<span class="badge">+{{ r.gap }}</span>{% endif %}
+          </td>
+          <td>{{ r.total_bytes | human_size }}</td>
+          <td>{{ r.dst_total_bytes | human_size }}</td>
+          <td class="small muted">{{ r.reconciled_at | local_time }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted">Ящиков нет.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="small muted" style="margin-top:10px">
+      Плюс в разнице — не ошибка: на приёмнике могли быть свои письма до
+      переезда, а в ящик всё это время продолжает падать новая почта.
+      Тревожен именно минус.
+    </p>
   </div>
 
 {% elif tab == 'log' %}

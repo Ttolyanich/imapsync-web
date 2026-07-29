@@ -47,6 +47,11 @@ def post(path, fields, files=None):
         return r.status, r.read().decode("utf-8"), r.geturl()
 
 
+def get_raw(path):
+    with opener.open(BASE + path) as r:
+        return r.status, r.read()
+
+
 def csrf(html):
     m = CSRF_RE.search(html)
     assert m, "csrf token not found"
@@ -208,7 +213,67 @@ status, html, _ = post(f"/projects/{project_id}/settings", {
 check("настройки переноса сохранены", "Настройки сохранены" in html)
 check("лимит размера письма записан", 'value="35"' in html)
 
-# 13. очистка кредов
+# 13. папки, сверка, отчёт
+status, html, _ = get(f"/projects/{project_id}/folders")
+check("экран папок открывается", "Соответствие папок" in html)
+check("без инвентаризации честно сообщаем, что папок нет",
+      "появятся здесь после проверки доступов" in html)
+
+status, html, _ = get(f"/projects/{project_id}?tab=report")
+check("вкладка отчёта открывается", "Сверка с приёмником" in html)
+check("объяснено, почему опрашиваем приёмник",
+      "сколько писем мы отправили" in html)
+
+status, html, _ = post(f"/projects/{project_id}/reconcile", {"csrf_token": csrf(html)})
+check("сверка запускается", "Сверка запущена" in html)
+
+status, body = get_raw(f"/projects/{project_id}/report.xlsx")
+check("отчёт xlsx отдаётся", body[:2] == b"PK", f"({len(body)} байт)")
+
+# 14. пользователи и роли
+status, html, _ = get("/settings/")
+check("экран настроек открывается", "Журнал действий" in html)
+check("журнал уже что-то записал", "создан проект" in html)
+
+status, html, _ = post("/settings/users", {
+    "csrf_token": csrf(html), "username": "operator1", "role": "operator", "password": "",
+})
+check("оператор создан с временным паролем", "Временный пароль" in html)
+operator_password = re.search(r"Временный пароль: (\S+)", html).group(1)
+
+# 15. права оператора
+status, html, _ = get("/settings/")
+post("/logout", {"csrf_token": csrf(html)})
+
+status, html, _ = get("/login")
+status, html, _ = post("/login", {
+    "csrf_token": csrf(html), "username": "operator1", "password": operator_password,
+})
+check("оператор вошёл", "Проекты" in html)
+
+status, html, _ = get("/settings/")
+check("оператору не видно журнал действий", "Журнал действий" not in html)
+check("оператору доступна смена своего пароля", "Мой пароль" in html)
+
+try:
+    get("/endpoints/new")
+    check("оператору закрыто создание серверов", False)
+except urllib.error.HTTPError as e:
+    check("оператору закрыто создание серверов", e.code == 403, f"(HTTP {e.code})")
+
+status, html, _ = get(f"/projects/{project_id}")
+check("чужой проект оператору виден", "Смоук-проект" in html)
+
+# возвращаемся администратором
+status, html, _ = get("/settings/")
+post("/logout", {"csrf_token": csrf(html)})
+status, html, _ = get("/login")
+status, html, _ = post("/login", {
+    "csrf_token": csrf(html), "username": ADMIN, "password": PASSWORD,
+})
+check("вернулись администратором", "Проекты" in html)
+
+# 16. очистка кредов
 status, html, _ = get(f"/projects/{project_id}?tab=settings")
 status, html, _ = post(f"/projects/{project_id}/purge-credentials", {"csrf_token": csrf(html)})
 check("пароли стёрты", "Пароли стёрты" in html)

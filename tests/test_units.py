@@ -9,7 +9,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.errors import classify  # noqa: E402
 from app.imap_probe import EndpointConfig, probe  # noqa: E402
-from app.presets import detect_role, load_presets  # noqa: E402
+from app.presets import (  # noqa: E402
+    detect_role,
+    load_folder_dictionary,
+    load_presets,
+    presets_for_side,
+)
 
 fails = []
 
@@ -56,7 +61,13 @@ check("пользовательская папка", detect_role("Договор
 
 print("\n--- пресеты ---")
 presets = load_presets()
-check("загружены все три", sorted(presets), ["exchange-onprem", "generic-imap", "mailru"])
+check("каталог пресетов загружен", sorted(presets),
+      ["exchange-onprem", "generic-imap", "gmail", "mailru", "yandex", "zimbra"])
+check("«Другой IMAP» стоит последним в плитках",
+      [p.id for p in presets_for_side("source")][-1], "generic-imap")
+check("Zimbra умеет мастер-доступ", presets["zimbra"].auth_mode, "master")
+check("Яндекс: удалённые, не корзина",
+      presets["yandex"].folder_for_role("trash"), "Удалённые")
 check("Mail.ru -> Отправленные", presets["mailru"].folder_for_role("sent"), "Отправленные")
 check("Exchange -> Sent Items", presets["exchange-onprem"].folder_for_role("sent"), "Sent Items")
 
@@ -65,6 +76,39 @@ result = probe(EndpointConfig(host="127.0.0.1", port=1, security="none"), "u", "
 check("проба не упала исключением", result.ok, False)
 print(f"       код: {result.error.code}, текст: {result.error.message}")
 check("ошибка распознана как сетевая", result.error.is_retriable, True)
+
+print("\n--- предложение по папкам ---")
+from types import SimpleNamespace  # noqa: E402
+
+from app.folder_mapping import _propose  # noqa: E402
+
+exchange = load_presets()["exchange-onprem"]
+folder_dict = load_folder_dictionary()
+project_default = SimpleNamespace(
+    migrate_spam=False, migrate_trash=True,
+    unknown_folder_policy="create", unknown_folder_container=None,
+)
+
+
+def propose(name, special=None, project=project_default):
+    return _propose(name, special, exchange, folder_dict, project)
+
+
+check("Отправленные -> Sent Items", propose("Отправленные").dst_name, "Sent Items")
+check("Корзина переносится", propose("Корзина").dst_name, "Deleted Items")
+check("Спам пропускается", propose("Спам").action, "skip")
+check("Outbox не трогаем", propose("Outbox").action, "skip")
+check("SPECIAL-USE важнее имени", propose("Хлам", "\\Junk").action, "skip")
+check("своя папка как есть", propose("Договоры 2025").dst_name, "Договоры 2025")
+
+project_no_trash = SimpleNamespace(
+    migrate_spam=False, migrate_trash=False,
+    unknown_folder_policy="container", unknown_folder_container="Импортировано",
+)
+check("корзина выключена настройкой",
+      propose("Корзина", project=project_no_trash).action, "skip")
+check("своя папка в контейнер",
+      propose("Договоры", project=project_no_trash).dst_name, "Импортировано/Договоры")
 
 print("\n--- команда imapsync ---")
 import tempfile  # noqa: E402

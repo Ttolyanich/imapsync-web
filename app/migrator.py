@@ -48,10 +48,9 @@ from app.models import (
     AUTH_MASTER,
     Endpoint,
     Mailbox,
-    MailboxFolder,
     Project,
 )
-from app.presets import detect_role, get_preset, load_folder_dictionary
+from app.folder_mapping import effective_plan
 
 log = logging.getLogger(__name__)
 
@@ -346,12 +345,9 @@ class MigrationRunner:
             src = session.get(Endpoint, project.src_endpoint_id)
             dst = session.get(Endpoint, project.dst_endpoint_id)
 
-            folders = (
-                session.query(MailboxFolder)
-                .filter(MailboxFolder.mailbox_id == mailbox_id, MailboxFolder.side == "src")
-                .all()
-            )
-            folder_map, excludes = _folder_plan(folders, src, dst, project)
+            # Подтверждённая человеком таблица соответствий главнее догадок;
+            # если её нет, работает та же автоматика, что строит предложение.
+            folder_map, excludes = effective_plan(session, mailbox_id, project, dst)
 
             spec = RunSpec(
                 mailbox_id=mailbox_id,
@@ -561,39 +557,3 @@ def _has_credentials(mailbox: Mailbox, src: Endpoint, dst: Endpoint) -> bool:
     src_ok = bool(mailbox.src_password_enc) or src.auth_mode != "password"
     dst_ok = bool(mailbox.dst_password_enc) or dst.auth_mode != "password"
     return src_ok and dst_ok
-
-
-def _folder_plan(folders, src: Endpoint, dst: Endpoint, project: Project):
-    """Посчитать пары «папка источника -> папка приёмника» и список исключений.
-
-    Роль папки определяется сначала по флагам SPECIAL-USE от сервера, затем по
-    словарю имён. Имя на приёмнике берётся из его пресета. Именно это не даёт
-    получить на приёмнике одновременно «Sent Items» и «Отправленные».
-    """
-    dst_preset = get_preset(dst.preset)
-    dictionary = load_folder_dictionary()
-
-    mapping: dict[str, str] = {}
-    excludes: list[str] = []
-
-    for folder in folders:
-        name = folder.name_display
-        role = detect_role(name, folder.special_use)
-
-        if not folder.selectable or dictionary.is_never_migrate(name):
-            excludes.append(name)
-            continue
-
-        if role == "junk" and not project.migrate_spam:
-            excludes.append(name)
-            continue
-        if role == "trash" and not project.migrate_trash:
-            excludes.append(name)
-            continue
-
-        if role and dst_preset is not None:
-            target = dst_preset.folder_for_role(role)
-            if target and target != name:
-                mapping[name] = target
-
-    return mapping, tuple(excludes)

@@ -21,8 +21,10 @@ from app.checker import get_check, start_check, stop_check
 from app.config import RAW_LOG_DIR
 from app.db import session_scope
 from app.errors import HINTS, human
+from app.folder_mapping import build_proposal, is_confirmed, save_mapping
 from app.imapsync_runner import describe_exit, read_log_tail
 from app.migrator import get_migration, start_migration, stop_migration
+from app.reconcile import build_report, get_reconcile, start_reconcile
 from app.journal import log_action, log_event
 from app.models import (
     MB_CHECK_FAILED,
@@ -139,6 +141,56 @@ def check_progress(project_id: int):
         project_id=project_id,
         can_edit=can_edit_project(project),
     )
+
+
+# --- папки -----------------------------------------------------------------
+
+
+@bp.get("/projects/<int:project_id>/folders")
+@login_required
+def folders(project_id: int):
+    with session_scope() as db:
+        project = _get(db, project_id)
+        rows = build_proposal(db, project)
+        context = _project_context(db, project)
+        confirmed = is_confirmed(db, project_id)
+    return render_template(
+        "project.html", tab="folders", folder_rows=rows,
+        folders_confirmed=confirmed, selected_mailbox=None, **context
+    )
+
+
+@bp.post("/projects/<int:project_id>/folders")
+@login_required
+def save_folders(project_id: int):
+    with session_scope() as db:
+        project = _get(db, project_id)
+        if not can_edit_project(project):
+            abort(403)
+
+        submitted: dict[str, tuple[str, str]] = {}
+        for key, value in request.form.items():
+            if not key.startswith("action__"):
+                continue
+            src_name = key[len("action__"):]
+            submitted[src_name] = (value, request.form.get(f"dst__{src_name}", ""))
+
+        saved = save_mapping(db, project_id, submitted)
+        skipped = sum(1 for action, _ in submitted.values() if action == "skip")
+        log_action(db, user=current_user(), action="folders_confirmed",
+                   target_type="project", target_id=project_id,
+                   details=f"{saved} папок, из них пропускаем {skipped}")
+        log_event(
+            db, project_id=project_id, code="folders_confirmed",
+            message=(
+                f"Таблица соответствий папок подтверждена: {saved} записей, "
+                f"не переносим {skipped}."
+            ),
+        )
+        project.last_activity_at = datetime.now(timezone.utc)
+
+    flash("Соответствия папок сохранены и будут применяться ко всем ящикам.", "ok")
+    return redirect(url_for("projects.folders", project_id=project_id))
 
 
 # --- перенос ---------------------------------------------------------------
@@ -266,6 +318,55 @@ def events_partial(project_id: int):
             for e in events
         ]
     return render_template("partials/event_feed.html", events=rows)
+
+
+# --- сверка ----------------------------------------------------------------
+
+
+@bp.post("/projects/<int:project_id>/reconcile")
+@login_required
+def reconcile_start(project_id: int):
+    """Опросить приёмник и сравнить с тем, что было на источнике.
+
+    Именно опросить: собственные счётчики переноса говорят, сколько писем мы
+    отправили, а не сколько там лежит. Разница между этими числами и есть
+    смысл сверки.
+    """
+    with session_scope() as db:
+        project = _get(db, project_id)
+        if not can_edit_project(project):
+            abort(403)
+        log_action(db, user=current_user(), action="reconcile_started",
+                   target_type="project", target_id=project_id)
+        project.last_activity_at = datetime.now(timezone.utc)
+
+    start_reconcile(project_id)
+    flash("Сверка запущена: опрашиваю приёмник.", "ok")
+    return redirect(url_for("projects.view", project_id=project_id, tab="report"))
+
+
+@bp.get("/projects/<int:project_id>/reconcile/progress")
+@login_required
+def reconcile_progress(project_id: int):
+    runner = get_reconcile(project_id)
+    return render_template(
+        "partials/reconcile_progress.html",
+        progress=runner.progress if runner else None,
+    )
+
+
+@bp.get("/projects/<int:project_id>/report.xlsx")
+@login_required
+def report_xlsx(project_id: int):
+    with session_scope() as db:
+        _get(db, project_id)
+    buffer, filename = build_report(project_id)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 # --- настройки и обслуживание ---------------------------------------------
@@ -502,6 +603,15 @@ def _mailbox_rows(db, project_id: int, *, only_failed: bool) -> list[dict]:
                 "exit_message": describe_exit(mailbox.last_exit_code)
                 if mailbox.last_exit_code not in (None, 0) else "",
                 "has_log": bool(mailbox.log_filename) or mailbox.run_attempts > 0,
+                # Сверка
+                "dst_total_messages": mailbox.dst_total_messages,
+                "dst_total_bytes": mailbox.dst_total_bytes,
+                "reconciled_at": mailbox.reconciled_at,
+                "gap": (
+                    (mailbox.dst_total_messages or 0) - (mailbox.total_messages or 0)
+                    if mailbox.reconciled_at and mailbox.total_messages is not None
+                    else None
+                ),
             }
         )
     return rows
