@@ -154,6 +154,17 @@ check("SSL на обеих сторонах", "--ssl1" in cmd and "--ssl2" in cm
 check("непроверяемый сертификат только у приёмника",
       "--sslargs2" in cmd and "--sslargs1" not in cmd, True)
 
+# Проверка очистки переменной окружения CGI/Gunicorn для imapsync
+import os
+os.environ["SERVER_SOFTWARE"] = "gunicorn/23.0.0"
+os.environ["HTTP_HOST"] = "127.0.0.1:8090"
+clean_env = os.environ.copy()
+for k in list(clean_env.keys()):
+    if k.startswith("HTTP_") or k in ("SERVER_SOFTWARE", "GATEWAY_INTERFACE"):
+        del clean_env[k]
+check("SERVER_SOFTWARE отфильтрован", "SERVER_SOFTWARE" not in clean_env, True)
+check("HTTP_HOST отфильтрован", "HTTP_HOST" not in clean_env, True)
+
 print("\n--- разбор вывода ---")
 check("папка", parse_line("Folder [Отправленные] -> [Sent Items]").kind, "folder")
 check("имя папки", parse_line("Folder [Отправленные] -> [Sent Items]").folder, "Отправленные")

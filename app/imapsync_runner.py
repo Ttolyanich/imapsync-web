@@ -263,6 +263,24 @@ class ImapsyncRun:
         return self.result
 
     def _execute(self, command: list[str], log_file, secrets: tuple[str, str]) -> None:
+        env = os.environ.copy()
+        # Очищаем переменные окружения CGI / Gunicorn, чтобы imapsync запускался
+        # в CLI-режиме, а не в режиме CGI-скрипта (в CGI режиме imapsync отдает 200 OK
+        # и сразу завершается с кодом 0, не выполняя сам перенос писем).
+        cgi_vars = {
+            "SERVER_SOFTWARE", "GATEWAY_INTERFACE", "REQUEST_METHOD",
+            "QUERY_STRING", "PATH_INFO", "PATH_TRANSLATED", "SCRIPT_NAME",
+            "DOCUMENT_ROOT", "REMOTE_ADDR", "REMOTE_HOST", "REMOTE_USER",
+            "AUTH_TYPE", "CONTENT_TYPE", "CONTENT_LENGTH", "CGI_MODE",
+        }
+        for key in list(env.keys()):
+            if key in cgi_vars or key.startswith("HTTP_"):
+                del env[key]
+
+        # Гарантируем UTF-8 локаль для правильной передачи названий папок
+        env["LC_ALL"] = "C.UTF-8"
+        env["LANG"] = "C.UTF-8"
+
         try:
             self._process = subprocess.Popen(
                 command,
@@ -272,6 +290,7 @@ class ImapsyncRun:
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
+                env=env,
             )
         except FileNotFoundError:
             message = (
