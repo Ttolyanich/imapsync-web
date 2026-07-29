@@ -13,22 +13,22 @@
 <div class="wizard-steps">
   <div class="step-item done">
     <span class="step-number">✓</span>
-    <span>Название</span>
+    <span>1. Название проекта</span>
   </div>
   <span class="step-divider">→</span>
   <div class="step-item {{ 'active' if is_src else 'done' }}">
     <span class="step-number">{{ '2' if is_src else '✓' }}</span>
-    <span>Источник</span>
+    <span>2. Откуда переносим</span>
   </div>
   <span class="step-divider">→</span>
   <div class="step-item {{ 'active' if not is_src else '' }}">
     <span class="step-number">3</span>
-    <span>Приёмник</span>
+    <span>3. Куда переносим</span>
   </div>
   <span class="step-divider">→</span>
   <div class="step-item">
     <span class="step-number">4</span>
-    <span>Ящики</span>
+    <span>4. Загрузка списка ящиков</span>
   </div>
 </div>
 

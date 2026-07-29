@@ -18,21 +18,21 @@
     {% if can_edit %}
       <form method="post" action="{{ url_for('projects.check_start', project_id=project.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">
+        <button type="submit" data-tooltip="Проверяет правильность логинов и паролей у всех ящиков до начала переноса">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
           Проверить доступы
         </button>
       </form>
       <form method="post" action="{{ url_for('projects.migrate_start', project_id=project.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="primary" type="submit">
+        <button class="primary" type="submit" data-tooltip="Запускает безопасный перенос всех писем и папок на новый сервер">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
           Перенести
         </button>
       </form>
       <form method="post" action="{{ url_for('projects.migrate_resync', project_id=project.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" title="Тот же прогон повторно: поедет только то, чего нет на приёмнике">
+        <button type="submit" data-tooltip="Докачивает только свежие письма, пришедшие во время переезда. Дубли не создаются.">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
           Досинхронить
         </button>
