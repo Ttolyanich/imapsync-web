@@ -1,13 +1,28 @@
 {% set only_failed = only_failed | default(false) %}
+{% set q = q | default('') %}
+{% set page = page | default(1) %}
+{% set total_pages = total_pages | default(1) %}
+{% set total_count = total_count | default(rows | length) %}
+
 <div class="card">
-  <div class="page-head">
-    <h3 style="margin:0">Список почтовых ящиков</h3>
-    <div class="actions" style="margin:0">
+  <div class="page-head" style="margin-bottom:var(--space-3)">
+    <div>
+      <h3 style="margin:0">Список почтовых ящиков</h3>
+      {% if total_count %}
+        <div class="muted small">Всего: {{ total_count }} ящиков</div>
+      {% endif %}
+    </div>
+    <div class="actions" style="margin:0;gap:var(--space-3)">
+      <input type="text" name="q" value="{{ q }}" placeholder="Поиск ящика..."
+             hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, failed=1 if only_failed else 0) }}"
+             hx-trigger="keyup changed delay:300ms, search" hx-target="#mailboxes"
+             style="width:240px;min-height:34px;font-size:13px">
+      
       <a class="button {{ 'primary' if not only_failed }}"
-         hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id) }}"
+         hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, q=q) }}"
          hx-target="#mailboxes" href="#">Все</a>
       <a class="button {{ 'primary' if only_failed }}"
-         hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, failed=1) }}"
+         hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, failed=1, q=q) }}"
          hx-target="#mailboxes" href="#">Только с ошибкой</a>
     </div>
   </div>
@@ -88,16 +103,40 @@
         </tr>
         {% else %}
         <tr><td colspan="8" class="muted" style="text-align:center;padding:var(--space-4)">
-          {{ 'Упавших ящиков нет.' if only_failed else 'Список пуст — импортируйте ящики.' }}
+          {% if q %}
+            Ящиков по запросу «{{ q }}» не найдено.
+          {% else %}
+            {{ 'Упавших ящиков нет.' if only_failed else 'Список пуст — импортируйте ящики.' }}
+          {% endif %}
         </td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
+  {% if total_pages > 1 %}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--line)">
+      <div class="small muted">
+        Страница {{ page }} из {{ total_pages }} (показано {{ rows | length }} из {{ total_count }})
+      </div>
+      <div class="actions" style="margin:0">
+        {% if page > 1 %}
+          <button class="button" hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, page=page-1, failed=1 if only_failed else 0, q=q) }}" hx-target="#mailboxes">
+            ← Назад
+          </button>
+        {% endif %}
+        {% if page < total_pages %}
+          <button class="button" hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, page=page+1, failed=1 if only_failed else 0, q=q) }}" hx-target="#mailboxes">
+            Вперёд →
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
   {% if rows and rows | selectattr('auth_locked') | list %}
-    <div class="notice warn small">
-      У части ящиков стоит защита от повторных попыток из-за ошибок авторизации. Снимите блокировку вручную после исправления пароля.
+    <div class="notice warn small" style="margin-top:var(--space-3)">
+      У часть ящиков заблокирована от повторных попыток из-за ошибок авторизации. Снимите блокировку вручную после исправления пароля.
     </div>
   {% endif %}
 </div>

@@ -1,7 +1,7 @@
 {% if progress %}
 {% set current = progress.current %}
 <div class="card" style="border-left:4px solid var(--accent)">
-  {# Бар 1 — текущий ящик #}
+  {# Активный ящик #}
   {% if current %}
     <div class="bar-labels">
       <span><b>{{ current.email }}</b>{% if current.folder %}
@@ -29,7 +29,27 @@
     {% endif %}
   {% endif %}
 
-  {# Бар 2 — весь проект #}
+  {# Если параллельно в работе несколько ящиков #}
+  {% if progress.active and progress.active | length > 1 %}
+    <div style="margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--line)">
+      <div class="small muted" style="margin-bottom:var(--space-2);font-weight:600">
+        Параллельно в работе ({{ progress.active | length }}):
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:var(--space-2)">
+        {% for p in progress.active.values() %}
+          <div style="background:var(--panel-subtle);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);font-size:12.5px">
+            <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.email }}</div>
+            <div class="muted" style="display:flex;justify-content:space-between;margin-top:2px">
+              <span>{{ p.folder or 'подключение...' }}</span>
+              {% if p.speed %}<span><b>{{ (p.speed / 1048576) | round(1) }} MB/s</b></span>{% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {# Бар всего проекта #}
   <div class="bar-labels" style="margin-top:var(--space-4)">
     <span>
       <b>

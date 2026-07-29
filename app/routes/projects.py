@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import math
+import zipfile
+from io import BytesIO
+
 from flask import (
     Blueprint,
     abort,
@@ -15,7 +19,7 @@ from flask import (
     send_file,
     url_for,
 )
-from sqlalchemy import case, func
+from sqlalchemy import case, func, or_
 
 from app.checker import get_check, start_check, stop_check
 from app.config import RAW_LOG_DIR
@@ -287,16 +291,45 @@ def mailbox_log_download(project_id: int, mailbox_id: int):
     return send_file(path, as_attachment=True, download_name=path.name)
 
 
+@bp.get("/projects/<int:project_id>/logs/zip")
+@login_required
+def project_logs_zip(project_id: int):
+    with session_scope() as db:
+        _get(db, project_id)
+
+    folder = RAW_LOG_DIR / f"project_{project_id}"
+    if not folder.exists():
+        abort(404)
+
+    log_files = list(folder.glob("mailbox_*"))
+    if not log_files:
+        abort(404)
+
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in log_files:
+            zf.write(f, arcname=f.name)
+    buf.seek(0)
+
+    filename = f"project_{project_id}_logs.zip"
+    return send_file(buf, mimetype="application/zip", as_attachment=True, download_name=filename)
+
+
 @bp.get("/projects/<int:project_id>/mailboxes")
 @login_required
 def mailboxes_partial(project_id: int):
     only_failed = request.args.get("failed") == "1"
+    q = request.args.get("q", "").strip()
+    page = request.args.get("page", type=int) or 1
     with session_scope() as db:
         project = _get(db, project_id)
-        rows = _mailbox_rows(db, project_id, only_failed=only_failed)
+        rows, total_count, page, total_pages = _mailbox_rows(
+            db, project_id, only_failed=only_failed, q=q, page=page, per_page=100
+        )
     return render_template(
         "partials/mailbox_table.html",
         rows=rows, project_id=project_id, only_failed=only_failed,
+        q=q, page=page, total_pages=total_pages, total_count=total_count,
         can_edit=can_edit_project(project),
     )
 
@@ -565,13 +598,34 @@ def _counts(db, project_id: int) -> dict:
     }
 
 
-def _mailbox_rows(db, project_id: int, *, only_failed: bool) -> list[dict]:
+def _mailbox_rows(
+    db, project_id: int, *, only_failed: bool = False, q: str | None = None, page: int = 1, per_page: int = 100
+) -> tuple[list[dict], int, int, int]:
     query = db.query(Mailbox).filter(Mailbox.project_id == project_id)
     if only_failed:
         query = query.filter(Mailbox.status == MB_CHECK_FAILED)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Mailbox.src_email.ilike(term),
+                Mailbox.dst_email.ilike(term),
+                Mailbox.note.ilike(term),
+            )
+        )
+
+    total_count = query.count()
+    total_pages = max(1, math.ceil(total_count / per_page))
+    page = max(1, min(page, total_pages))
 
     rows = []
-    for mailbox in query.order_by(Mailbox.src_email).all():
+    mailboxes = (
+        query.order_by(Mailbox.src_email)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    for mailbox in mailboxes:
         rows.append(
             {
                 "id": mailbox.id,
@@ -614,7 +668,7 @@ def _mailbox_rows(db, project_id: int, *, only_failed: bool) -> list[dict]:
                 ),
             }
         )
-    return rows
+    return rows, total_count, page, total_pages
 
 
 def _percent(done: int | None, total: int | None) -> int:
@@ -629,7 +683,7 @@ def _project_context(db, project: Project) -> dict:
     counts = _counts(db, project.id)
     runner = get_check(project.id)
     migration = get_migration(project.id)
-    rows = _mailbox_rows(db, project.id, only_failed=False)
+    rows, _, _, _ = _mailbox_rows(db, project.id, only_failed=False)
 
     return {
         "project": {
