@@ -55,16 +55,24 @@ on-prem Exchange, Zimbra, хостинг-панели, старые IMAP-сер�
 
 ## Установка
 
+Образ собирается GitHub Actions и лежит в ghcr.io — собирать ничего не нужно.
+
 ```bash
-git clone https://github.com/OWNER/imapsync-web.git
+git clone https://github.com/Ttolyanich/imapsync-web.git
 cd imapsync-web
 cp .env.example .env
 ```
 
-Заполни в `.env` как минимум `ADMIN_PASSWORD` и `FERNET_KEY`:
+Заполни в `.env` как минимум `ADMIN_PASSWORD` и `FERNET_KEY`. Ключ шифрования:
 
 ```bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Если Python с пакетом `cryptography` под рукой нет — сгенерируй прямо в образе:
+
+```bash
+docker run --rm ghcr.io/ttolyanich/imapsync-web:latest python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
 Затем:
@@ -73,7 +81,14 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 docker compose up -d
 ```
 
-Панель поднимется на `http://127.0.0.1:8090`.
+Панель поднимется на `http://127.0.0.1:8090`. Обновление — без пересборки:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Собрать из исходников вместо готового образа можно, раскомментировав `build: .`
+в `docker-compose.yml`.
 
 ### Где разворачивать
 
@@ -129,7 +144,7 @@ docker compose up -d
 ## Разработка
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
+python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 alembic upgrade head

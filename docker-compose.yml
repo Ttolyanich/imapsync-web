@@ -1,8 +1,10 @@
 services:
   imapsync-web:
-    build: .
-    # Или готовый образ:
-    # image: ghcr.io/OWNER/imapsync-web:latest
+    # Готовый образ собирается GitHub Actions при каждом пуше в main.
+    # Обновление: docker compose pull && docker compose up -d
+    image: ghcr.io/ttolyanich/imapsync-web:latest
+    # Собрать из исходников вместо готового образа — раскомментируй:
+    # build: .
     container_name: imapsync-web
     restart: unless-stopped
     env_file:
