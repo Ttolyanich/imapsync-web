@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         perl \
         ca-certificates \
         curl \
+        # imapsync вызывает ps для отчёта о памяти. Без procps он работает,
+        # но засыпает лог строками «Can't exec "ps"» — по одной на каждый вызов.
+        procps \
         libauthen-ntlm-perl \
         libcgi-pm-perl \
         libcrypt-openssl-rsa-perl \
