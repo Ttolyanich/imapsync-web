@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" role="img" aria-label="Другой IMAP">
+  <rect width="40" height="40" rx="9" fill="currentColor" fill-opacity="0.10"/>
+  <rect x="9" y="12" width="22" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M9.5 14.5 20 22l10.5-7.5" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

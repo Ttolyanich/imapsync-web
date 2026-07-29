@@ -1,0 +1,31 @@
+id: generic-imap
+name: Другой IMAP
+icon: generic.svg
+# Ручной ввод — проверять нечего, поэтому значок «не проверено» не показываем.
+verified: true
+
+roles: [source, destination]
+
+host: ""
+port: 993
+security: ssl
+verify_cert: true
+auth_mode: password
+max_parallel: 3
+
+# Без пресета полагаемся на SPECIAL-USE, а если сервер его не объявляет —
+# на общий словарь имён. Английские названия как наиболее вероятные.
+folders:
+  inbox: INBOX
+  sent: Sent
+  drafts: Drafts
+  trash: Trash
+  junk: Junk
+  archive: Archive
+
+hints:
+  - "Пресета для этого сервера нет — параметры вводятся вручную."
+  - "Если сервер окажется распространённым, добавь для него пресет в каталог
+     presets/ и пришли пул-реквест: это один YAML-файл без кода."
+
+imapsync_args: []

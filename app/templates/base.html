@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}imapsync-web{% endblock %}</title>
+  {# Ничего с CDN: контейнер ставят в том числе в закрытый контур без интернета. #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='img/generic.svg') }}">
+  <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}" defer></script>
+</head>
+<body>
+{% if current_user() %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">✉</span>
+      <span>imapsync-web</span>
+    </div>
+    <nav>
+      <a href="{{ url_for('projects.index') }}"
+         class="{{ 'active' if request.blueprint in ('projects', 'wizard') }}">Проекты</a>
+      <a href="{{ url_for('endpoints.index') }}"
+         class="{{ 'active' if request.blueprint == 'endpoints' }}">Серверы</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="who">
+        {{ current_user().username }}
+        <span class="muted">{{ 'администратор' if current_user().is_admin else 'оператор' }}</span>
+      </div>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="link" type="submit">Выйти</button>
+      </form>
+      <div class="muted version">v{{ version }}</div>
+    </div>
+  </aside>
+
+  <main class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, text in messages %}
+            <div class="flash flash-{{ category }}">{{ text }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+  {% block anon %}{% endblock %}
+{% endif %}
+</body>
+</html>

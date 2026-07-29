@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Серверы — imapsync-web{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Почтовые серверы</h1>
+  {% if current_user().is_admin %}
+    <a class="button primary" href="{{ url_for('endpoints.create') }}">Добавить сервер</a>
+  {% endif %}
+</div>
+
+<p class="muted small">
+  Настройки подключения хранятся здесь, а не в списке ящиков. Поэтому при смене
+  схемы доступа не приходится переделывать выгрузку на двести строк.
+</p>
+
+{% if current_user().is_admin %}
+<div class="card">
+  <h3>Добавить из пресета</h3>
+  <div class="tiles">
+    {% for p in presets.values() %}
+      <a class="tile" href="{{ url_for('endpoints.create', preset=p.id) }}">
+        <img src="{{ url_for('static', filename='img/' ~ p.icon) }}" alt="">
+        <span>
+          <span class="tile-name">{{ p.name }}</span>
+          {% if p.host %}<span class="tile-host">{{ p.host }}</span>{% endif %}
+          {% if not p.verified %}<span class="unverified">не проверен на живом сервере</span>{% endif %}
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if endpoints %}
+<div class="card table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th></th><th>Название</th><th>Адрес</th><th>Аутентификация</th>
+        <th>Потоков</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in endpoints %}
+      <tr>
+        <td>{% if e.preset %}<img src="{{ url_for('static', filename='img/' ~ e.preset.icon) }}"
+                                  alt="" width="24" height="24">{% endif %}</td>
+        <td><b>{{ e.name }}</b></td>
+        <td>{{ e.host }}:{{ e.port }} <span class="muted small">{{ e.security }}</span></td>
+        <td>
+          {{ e.auth_mode }}
+          {% if e.has_secret %}<span class="badge ok">секрет задан</span>{% endif %}
+        </td>
+        <td>{{ e.max_parallel }}</td>
+        <td>
+          <div class="actions" style="margin:0">
+            <form method="post" action="{{ url_for('endpoints.test', endpoint_id=e.id) }}"
+                  hx-post="{{ url_for('endpoints.test', endpoint_id=e.id) }}"
+                  hx-target="#test-{{ e.id }}" hx-swap="innerHTML">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Проверить связь</button>
+            </form>
+            {% if current_user().is_admin %}
+              <a class="button" href="{{ url_for('endpoints.edit', endpoint_id=e.id) }}">Изменить</a>
+            {% endif %}
+          </div>
+          <div id="test-{{ e.id }}"></div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

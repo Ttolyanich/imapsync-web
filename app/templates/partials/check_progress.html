@@ -1,0 +1,30 @@
+{% if progress %}
+<div class="card">
+  <div class="bar-labels">
+    <span>
+      {% if progress.running %}Проверка доступов идёт{% else %}Проверка завершена{% endif %}
+      {% if progress.current %}<span class="muted">· {{ progress.current }}</span>{% endif %}
+    </span>
+    <span class="muted">{{ progress.percent }}%</span>
+  </div>
+  <div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
+  <div class="small muted" style="margin-top:6px">
+    проверено {{ progress.checked }} из {{ progress.total }} ·
+    доступны {{ progress.ok }} · с ошибкой {{ progress.failed }}
+    {% if progress.skipped %} · пропущено с прошлой ошибкой пароля {{ progress.skipped }}{% endif %}
+  </div>
+
+  {% if progress.aborted %}
+    <div class="notice err small">{{ progress.abort_reason }}</div>
+  {% endif %}
+
+  {% if progress.running and can_edit %}
+    <div class="actions">
+      <form method="post" action="{{ url_for('projects.check_stop', project_id=project_id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Остановить</button>
+      </form>
+    </div>
+  {% endif %}
+</div>
+{% endif %}

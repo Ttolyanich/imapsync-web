@@ -1,0 +1,72 @@
+# Словарь для опознания спецпапок по имени.
+#
+# Используется ТОЛЬКО как запасной вариант: сначала мы спрашиваем у сервера
+# флаги SPECIAL-USE (RFC 6154), и лишь если сервер их не объявляет — смотрим сюда.
+#
+# Смысл: привести папку к «роли» (inbox/sent/drafts/trash/junk/archive),
+# чтобы потом взять каноническое имя этой роли из пресета приёмника.
+# Именно это не даёт получить на приёмнике одновременно и "Sent Items",
+# и "Отправленные" с размазанными по ним письмами.
+#
+# Сравнение регистронезависимое, пробелы по краям обрезаются.
+# Добавить свой язык или свой сервер — просто дописать строку сюда.
+
+version: 1
+
+roles:
+  inbox:
+    - INBOX
+    - Входящие
+    - Inbox
+
+  sent:
+    - Sent
+    - Sent Items
+    - Sent Messages
+    - Sent Mail
+    - Отправленные
+    - Отправленная почта
+    - Исходящие
+    - "&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-"   # Отправленные в modified UTF-7
+
+  drafts:
+    - Drafts
+    - Черновики
+    - "&BCcENQRABD0EPgQyBDgEOgQ4-"
+
+  trash:
+    - Trash
+    - Deleted Items
+    - Deleted Messages
+    - Корзина
+    - Удаленные
+    - Удалённые
+    - "&BBoEPgRABDcEOAQ9BDA-"
+
+  junk:
+    - Junk
+    - Junk E-mail
+    - Junk Email
+    - Bulk Mail
+    - Spam
+    - Спам
+    - "&BCEEPwQwBDw-"
+
+  archive:
+    - Archive
+    - Archives
+    - Архив
+    - "&BBAEQATFBDgEMg-"
+
+# Папки, которые не переносим никогда: это не почта пользователя.
+never_migrate:
+  - Outbox
+  - Исходящие (Outbox)
+  - Calendar
+  - Contacts
+  - Tasks
+  - Notes
+  - Journal
+  - Sync Issues
+  - Conversation History
+  - RSS Feeds

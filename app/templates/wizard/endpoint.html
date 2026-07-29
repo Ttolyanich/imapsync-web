@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — imapsync-web{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="muted">
+  Проект «{{ project.name }}» · шаг {{ 2 if side == 'source' else 3 }} из 4
+</p>
+
+{% if options %}
+<form class="card" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h3>Уже настроенные серверы</h3>
+  {% for o in options %}
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <input type="radio" name="endpoint_id" value="{{ o.id }}"
+             {{ 'checked' if selected == o.id }} style="width:auto;margin:0">
+      {% if o.preset %}<img src="{{ url_for('static', filename='img/' ~ o.preset.icon) }}"
+                            alt="" width="24" height="24">{% endif %}
+      <span style="color:var(--ink)">
+        <b>{{ o.name }}</b>
+        <span class="muted small">{{ o.host }}:{{ o.port }}</span>
+      </span>
+    </label>
+  {% endfor %}
+  <div class="actions">
+    <button class="primary" type="submit">Дальше</button>
+  </div>
+</form>
+{% endif %}
+
+{% if current_user().is_admin %}
+<div class="card">
+  <h3>{{ 'Или добавить новый' if options else 'Добавить сервер' }}</h3>
+  <div class="tiles">
+    {% for p in presets %}
+      <a class="tile" href="{{ url_for('endpoints.create', preset=p.id,
+                                       wizard_project=project.id, wizard_side=side) }}">
+        <img src="{{ url_for('static', filename='img/' ~ p.icon) }}" alt="">
+        <span>
+          <span class="tile-name">{{ p.name }}</span>
+          {% if p.host %}<span class="tile-host">{{ p.host }}</span>{% endif %}
+          {% if not p.verified %}<span class="unverified">не проверен</span>{% endif %}
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+  <p class="small muted">
+    Плитка подставляет адрес, порт, режим входа, имена системных папок и
+    безопасный лимит подключений. Своего сервиса нет в списке — бери «Другой IMAP».
+  </p>
+</div>
+{% else %}
+  <div class="notice small">Добавлять серверы может только администратор.</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Список ящиков — imapsync-web{% endblock %}
+
+{% block content %}
+<h1>Список ящиков</h1>
+<p class="muted">Проект «{{ project.name }}» · шаг 4 из 4</p>
+
+<form class="card" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="mode" value="file">
+  <h3>Загрузить файл</h3>
+  <label>CSV или xlsx
+    <input type="file" name="file" accept=".csv,.txt,.xlsx,.xlsm" required>
+  </label>
+  <p class="small muted">
+    Кодировка и разделитель определяются сами (в том числе Excel-овские cp1251
+    и «;»). Заголовок не обязателен — колонки можно будет указать вручную.
+    <b>xlsx надёжнее CSV</b>: в нём попросту нет проблемы кодировок.
+  </p>
+  <div class="actions">
+    <button class="primary" type="submit">Загрузить</button>
+  </div>
+</form>
+
+<form class="card" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="mode" value="generate">
+  <h3>Или построить по шаблону</h3>
+  <p class="small muted">
+    При переезде домена список нужен только для исключений: остальное строится
+    правилом. Пароли в этом случае задаются на сервере (мастер-доступ) либо
+    дописываются позже.
+  </p>
+  <label>Адреса источника, по одному в строке
+    <textarea name="addresses" placeholder="ivanov@mail.ru&#10;petrov@mail.ru"></textarea>
+  </label>
+  <label>Шаблон адреса приёмника
+    <input name="template" value="{local}@newdomain.ru">
+  </label>
+  <p class="small muted">Подстановки: <code>{local}</code>, <code>{domain}</code>, <code>{email}</code></p>
+  <div class="actions">
+    <button type="submit">Построить список</button>
+  </div>
+</form>
+{% endblock %}

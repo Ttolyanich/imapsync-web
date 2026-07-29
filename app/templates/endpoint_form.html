@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Сервер — imapsync-web{% endblock %}
+
+{% block content %}
+<h1>{{ 'Изменить сервер' if data.id else 'Новый сервер' }}</h1>
+
+{% if preset and preset.hints %}
+<div class="notice">
+  <b>{{ preset.name }}</b>
+  <ul>
+    {% for hint in preset.hints %}<li>{{ hint }}</li>{% endfor %}
+  </ul>
+  {% if not preset.verified %}
+    <div class="small muted">
+      Пресет не проверялся на живом сервере. Если всё заработало — поправь
+      <code>verified: true</code> в <code>presets/{{ preset.id }}.yaml</code> и пришли пул-реквест.
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<form class="card" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="preset" value="{{ data.preset }}">
+  {% if request.args.get('wizard_project') %}
+    <input type="hidden" name="wizard_project" value="{{ request.args.get('wizard_project') }}">
+    <input type="hidden" name="wizard_side" value="{{ request.args.get('wizard_side') }}">
+  {% endif %}
+
+  <div class="row">
+    <label>Название
+      <input name="name" value="{{ data.name }}" required>
+    </label>
+    <label>Адрес сервера
+      <input name="host" value="{{ data.host }}" placeholder="imap.example.com" required>
+    </label>
+    <label style="max-width:120px">Порт
+      <input name="port" type="number" value="{{ data.port }}" required>
+    </label>
+  </div>
+
+  <div class="row">
+    <label>Шифрование
+      <select name="security">
+        {% for value, title in security_modes.items() %}
+          <option value="{{ value }}" {{ 'selected' if data.security == value }}>{{ title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Аутентификация
+      <select name="auth_mode">
+        {% for value, title in auth_modes.items() %}
+          <option value="{{ value }}" {{ 'selected' if data.auth_mode == value }}>{{ title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Одновременных ящиков
+      <input name="max_parallel" type="number" min="1" value="{{ data.max_parallel }}">
+    </label>
+  </div>
+
+  <p class="small muted">
+    Ограничение числа подключений почтовые сервисы обычно применяют к IP-адресу,
+    а не к учётной записи. За корпоративным NAT это адрес всего офиса — поднимай
+    значение по факту, а не заранее.
+  </p>
+
+  <label>
+    <input type="checkbox" name="verify_cert" {{ 'checked' if data.verify_cert }}>
+    Проверять сертификат
+    <span class="muted small">— выключать только для локальных серверов с самоподписанным</span>
+  </label>
+
+  <h3>Мастер-доступ и токен</h3>
+  <p class="small muted">
+    Заполняется, только если выбран режим «общий админский пароль» или «токен XOAUTH2».
+    Мастер-доступ умеют Dovecot, Zimbra и Courier; Exchange — нет, там нужен пароль
+    от каждого ящика.
+  </p>
+  <div class="row">
+    <label>Учётная запись администратора
+      <input name="master_username" value="{{ data.master_username }}">
+    </label>
+    <label style="max-width:120px">Разделитель
+      <input name="master_separator" value="{{ data.master_separator }}">
+    </label>
+    <label>Пароль или токен
+      <input name="master_secret" type="password" autocomplete="new-password"
+             placeholder="{{ 'сохранён, оставь пустым чтобы не менять' if data.has_secret else '' }}">
+    </label>
+  </div>
+  {% if data.has_secret %}
+    <label><input type="checkbox" name="clear_secret"> Удалить сохранённый секрет</label>
+  {% endif %}
+
+  <label>Заметки
+    <textarea name="notes">{{ data.notes }}</textarea>
+  </label>
+
+  <div class="actions">
+    <button class="primary" type="submit">Сохранить</button>
+    <a class="button" href="{{ url_for('endpoints.index') }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

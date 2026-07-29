@@ -1,0 +1,67 @@
+{% if progress %}
+{% set current = progress.current %}
+<div class="card">
+  {# Бар 1 — текущий ящик, по числу писем. #}
+  {% if current %}
+    <div class="bar-labels">
+      <span><b>{{ current.email }}</b>{% if current.folder %}
+        <span class="muted">→ {{ current.folder }}</span>{% endif %}</span>
+      <span class="muted">
+        {% if current.total_messages %}
+          {{ (100 * current.done_messages / current.total_messages) | round | int }}%
+        {% endif %}
+      </span>
+    </div>
+    <div class="bar">
+      <span style="width: {{ (100 * current.done_messages / current.total_messages) | round | int
+                             if current.total_messages else 0 }}%"></span>
+    </div>
+    <div class="small muted" style="margin-top:6px">
+      {{ current.done_messages | human_count }} / {{ current.total_messages | human_count }} писем
+      · {{ current.done_bytes | human_size }} / {{ current.total_bytes | human_size }}
+      {% if current.speed %} · {{ (current.speed / 1048576) | round(1) }} МБ/с{% endif %}
+    </div>
+
+    {% if not current.output_recognised and current.last_line %}
+      {# Формат вывода imapsync построчно не зафиксирован. Пока ни одна строка
+         не опознана, честнее показать её как есть, чем рисовать нули. #}
+      <div class="small muted" style="margin-top:4px">
+        <code>{{ current.last_line }}</code>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {# Бар 2 — весь проект, по числу ящиков. #}
+  <div class="bar-labels" style="margin-top:14px">
+    <span>
+      {% if progress.stopping %}Останавливаю…
+      {% elif progress.running %}Перенос идёт
+      {% else %}Прогон завершён{% endif %}
+    </span>
+    <span class="muted">{{ progress.percent }}%</span>
+  </div>
+  <div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
+  <div class="small muted" style="margin-top:6px">
+    {{ progress.finished_mailboxes }} / {{ progress.total_mailboxes }} ящиков
+    · перенесено {{ progress.done_mailboxes }} · с ошибками {{ progress.failed_mailboxes }}
+    {% if progress.active %} · в работе {{ progress.active | length }}{% endif %}
+    {% if progress.total_speed %} · {{ (progress.total_speed / 1048576) | round(1) }} МБ/с всего{% endif %}
+  </div>
+
+  {% if progress.resumed %}
+    <div class="notice warn small">
+      Возобновлено {{ progress.resumed }} ящиков после перезапуска.
+      Если это не то, что нужно, — останови прогон.
+    </div>
+  {% endif %}
+
+  {% if progress.running and can_edit %}
+    <div class="actions">
+      <form method="post" action="{{ url_for('projects.migrate_stop', project_id=project_id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Остановить перенос</button>
+      </form>
+    </div>
+  {% endif %}
+</div>
+{% endif %}

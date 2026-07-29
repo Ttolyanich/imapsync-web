@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — imapsync-web{% endblock %}
+
+{% block content %}
+{# Партиалы ниже подгружаются и отдельными запросами, где project_id приходит
+   из маршрута — здесь готовим то же имя, чтобы шаблон был один. #}
+{% set project_id = project.id %}
+<div class="page-head">
+  <div>
+    <h1>{{ project.name }}</h1>
+    <div class="muted small">
+      {% if src %}{{ src.name }}{% else %}сервер не выбран{% endif %}
+      → {% if dst %}{{ dst.name }}{% else %}сервер не выбран{% endif %}
+      · автор {{ project.author }}
+    </div>
+  </div>
+  <div class="actions" style="margin:0">
+    {% if can_edit %}
+      <form method="post" action="{{ url_for('projects.check_start', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Проверить доступы</button>
+      </form>
+      <form method="post" action="{{ url_for('projects.migrate_start', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="primary" type="submit">Перенести</button>
+      </form>
+      <form method="post" action="{{ url_for('projects.migrate_resync', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" title="Тот же прогон повторно: поедет только то, чего нет на приёмнике">
+          Досинхронить
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stat-row card">
+  <div><b>{{ counts.total }}</b><span class="muted">ящиков</span></div>
+  <div><b>{{ counts.ok }}</b><span class="muted">доступны</span></div>
+  <div><b>{{ counts.failed }}</b><span class="muted">с ошибкой</span></div>
+  <div><b>{{ counts.messages | human_count }}</b><span class="muted">писем</span></div>
+  <div><b>{{ counts.size | human_size }}</b><span class="muted">объём</span></div>
+</div>
+
+{# Опрос раз в 2 секунды: работает через любые прокси, переживает разрыв. #}
+<div id="migrate-progress"
+     hx-get="{{ url_for('projects.migrate_progress', project_id=project.id) }}"
+     hx-trigger="load, every 2s" hx-swap="innerHTML"></div>
+
+<div id="check-progress"
+     hx-get="{{ url_for('projects.check_progress', project_id=project.id) }}"
+     hx-trigger="load, every 2s" hx-swap="innerHTML"></div>
+
+{% if quota_warnings %}
+  <div class="notice warn">
+    У {{ quota_warnings }} ящиков объём больше, чем свободное место на приёмнике.
+    Перенос встанет на середине — увеличь квоту до старта.
+  </div>
+{% endif %}
+
+<div class="notice small">
+  Переносятся <b>письма и структура папок</b>. Календари, контакты, задачи,
+  правила обработки почты и автоответы протокол IMAP не переносит — их придётся
+  перенести отдельно и другими средствами.
+</div>
+
+<div class="tabs">
+  <a href="{{ url_for('projects.view', project_id=project.id, tab='mailboxes') }}"
+     class="{{ 'active' if tab == 'mailboxes' }}">Ящики</a>
+  <a href="{{ url_for('projects.view', project_id=project.id, tab='log') }}"
+     class="{{ 'active' if tab == 'log' }}">Лог</a>
+  <a href="{{ url_for('projects.view', project_id=project.id, tab='settings') }}"
+     class="{{ 'active' if tab == 'settings' }}">Настройки</a>
+</div>
+
+{% if tab == 'mailboxes' %}
+  <div id="mailboxes"
+       hx-get="{{ url_for('projects.mailboxes_partial', project_id=project.id) }}"
+       hx-trigger="every 5s" hx-swap="innerHTML">
+    {% include "partials/mailbox_table.html" %}
+  </div>
+
+{% elif tab == 'log' %}
+  <div class="card">
+    <h3>Что происходило</h3>
+    <p class="small muted">
+      Компактная лента событий — десятки строк на ящик. Она живёт в базе всегда.
+      Подробный лог imapsync (строка на каждое письмо) лежит отдельным файлом
+      и хранится ограниченное время — выбери ящик ниже.
+    </p>
+    <div hx-get="{{ url_for('projects.events_partial', project_id=project.id) }}"
+         hx-trigger="load, every 3s" hx-swap="innerHTML"></div>
+  </div>
+
+  <div class="card">
+    <h3>Подробный лог прогона</h3>
+    <label>Ящик
+      <select id="log-mailbox">
+        <option value="">— выбери ящик —</option>
+        {% for r in rows if r.has_log %}
+          <option value="{{ r.id }}" {{ 'selected' if selected_mailbox == r.id }}>
+            {{ r.src_email }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="actions" style="margin-bottom:10px">
+      <a class="button" id="log-download" href="#" style="display:none">Скачать лог</a>
+    </div>
+    <pre id="log-view" class="log-view">Выбери ящик, чтобы увидеть лог.</pre>
+  </div>
+
+  <script>
+    // Опрос с позиции, а не поток: панель ставят за неизвестным прокси, и
+    // потоковые ответы регулярно ломаются о буферизацию. Разрыв здесь безвреден —
+    // следующий запрос продолжает с той же позиции.
+    (function () {
+      var select = document.getElementById('log-mailbox');
+      var view = document.getElementById('log-view');
+      var download = document.getElementById('log-download');
+      var base = "{{ url_for('projects.view', project_id=project.id) }}";
+      var offset = 0, current = null, timer = null;
+
+      function urlFor(id, suffix) {
+        return base + '/mailboxes/' + id + '/log' + suffix;
+      }
+
+      function poll() {
+        if (!current) return;
+        fetch(urlFor(current, '?from=' + offset))
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.missing) {
+              view.textContent = 'Лог ещё не создан — прогон не запускался.';
+              return;
+            }
+            if (data.text) {
+              if (offset === 0) view.textContent = '';
+              view.textContent += data.text;
+              view.scrollTop = view.scrollHeight;
+            }
+            offset = data.offset;
+          })
+          .catch(function () { /* сеть моргнула — просто попробуем в следующий раз */ });
+      }
+
+      function switchTo(id) {
+        current = id;
+        offset = 0;
+        view.textContent = id ? 'Загружаю…' : 'Выбери ящик, чтобы увидеть лог.';
+        download.style.display = id ? '' : 'none';
+        if (id) download.href = urlFor(id, '/download');
+        if (timer) clearInterval(timer);
+        if (id) { poll(); timer = setInterval(poll, 2000); }
+      }
+
+      select.addEventListener('change', function () { switchTo(this.value); });
+      if (select.value) switchTo(select.value);
+    })();
+  </script>
+
+{% else %}
+  <form class="card" method="post"
+        action="{{ url_for('projects.save_settings', project_id=project.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <h3>Перенос</h3>
+
+    <label>Одновременно ящиков
+      <input name="max_parallel" type="number" min="1" value="{{ project.max_parallel }}"
+             {{ 'disabled' if not can_edit }}>
+    </label>
+    <p class="small muted">
+      Действует минимум из трёх значений: проекта и обоих серверов.
+      {% if src %}«{{ src.name }}» — {{ src.max_parallel }}{% endif %}{% if dst %},
+      «{{ dst.name }}» — {{ dst.max_parallel }}{% endif %}.
+      Внутри одного ящика распараллелить нельзя: imapsync идёт по папкам
+      последовательно, поэтому большой ящик поедет ровно столько, сколько поедет.
+    </p>
+
+    <label>
+      <input type="checkbox" name="migrate_trash" {{ 'checked' if project.migrate_trash }}
+             {{ 'disabled' if not can_edit }}>
+      Переносить Корзину
+      <span class="muted small">— люди регулярно держат в ней нужное</span>
+    </label>
+    <label>
+      <input type="checkbox" name="migrate_spam" {{ 'checked' if project.migrate_spam }}
+             {{ 'disabled' if not can_edit }}>
+      Переносить Спам
+      <span class="muted small">— обычно не нужно: раздувает объём</span>
+    </label>
+
+    <label>Папки, которых нет в таблице соответствий
+      <select name="unknown_folder_policy" {{ 'disabled' if not can_edit }}>
+        <option value="create" {{ 'selected' if project.unknown_folder_policy == 'create' }}>
+          создать как есть</option>
+        <option value="container" {{ 'selected' if project.unknown_folder_policy == 'container' }}>
+          положить внутрь папки-контейнера</option>
+        <option value="skip" {{ 'selected' if project.unknown_folder_policy == 'skip' }}>
+          пропустить</option>
+      </select>
+    </label>
+    <label>Имя папки-контейнера
+      <input name="unknown_folder_container" value="{{ project.unknown_folder_container }}"
+             placeholder="Импортировано" {{ 'disabled' if not can_edit }}>
+    </label>
+
+    <label>Пропускать письма крупнее, МБ
+      <input name="max_message_size_mb" type="number" min="0"
+             value="{{ project.max_message_size_mb }}" {{ 'disabled' if not can_edit }}>
+    </label>
+    <p class="small muted">
+      0 — без ограничения. Пропущенные письма попадают в лог и в отчёт.
+      Обрезать письмо мы не умеем сознательно: это была бы тихая потеря данных,
+      которую обнаружат через год.
+    </p>
+
+    {% if can_edit %}
+      <div class="actions"><button class="primary" type="submit">Сохранить</button></div>
+    {% endif %}
+  </form>
+
+  {% if can_edit %}
+  <div class="card">
+    <h3>Секреты и завершение</h3>
+    <p class="small muted">
+      Пароли нужны, пока проект идёт, и превращаются в чистый риск, когда он
+      закончен. После очистки останутся адреса, счётчики, лог и отчёты —
+      проект будет читаться как документ.
+      {% if project.credentials_purged_at %}
+        <br><b>Пароли уже стёрты {{ project.credentials_purged_at | local_time }}.</b>
+      {% endif %}
+    </p>
+    <div class="actions">
+      <form method="post" action="{{ url_for('projects.purge_credentials', project_id=project.id) }}"
+            onsubmit="return confirm('Стереть все пароли этого проекта? Продолжить перенос без них будет нельзя.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Стереть пароли</button>
+      </form>
+      <form method="post" action="{{ url_for('projects.complete', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Завершить проект</button>
+      </form>
+      <form method="post" action="{{ url_for('projects.delete', project_id=project.id) }}"
+            onsubmit="return confirm('Удалить проект целиком вместе с историей и логами?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="danger" type="submit">Удалить проект</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

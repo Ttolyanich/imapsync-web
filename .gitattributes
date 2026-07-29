@@ -1,0 +1,17 @@
+# Репозиторий редактируется под Windows, а работает внутри Linux-контейнера.
+# Без принудительного LF docker-entrypoint.sh приезжает с CRLF и контейнер
+# падает с «/bin/sh^M: bad interpreter» — ошибка, которую потом ищут часами.
+* text=auto eol=lf
+
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+*.png binary
+*.jpg binary
+*.gz binary

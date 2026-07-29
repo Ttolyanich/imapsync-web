@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Проекты — imapsync-web{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Проекты</h1>
+  <a class="button primary" href="{{ url_for('wizard.new') }}">Новый проект</a>
+</div>
+
+{% if not cards %}
+  <div class="card">
+    <p>Проектов пока нет.</p>
+    <p class="muted small">
+      Проект — это одна миграция: пара серверов и список ящиков. Начни с нового
+      проекта, панель проведёт по шагам: откуда, куда, список, проверка доступов.
+    </p>
+  </div>
+{% else %}
+<div class="grid">
+  {% for c in cards %}
+  <div class="card project-card">
+    <div class="page-head">
+      <a href="{{ url_for('projects.view', project_id=c.id) }}"><b>{{ c.name }}</b></a>
+      <span class="badge {{ 'ok' if c.status == 'done' else '' }}">
+        {{ {'draft': 'черновик', 'ready': 'готов', 'running': 'идёт', 'paused': 'пауза',
+            'done': 'завершён'}.get(c.status, c.status) }}
+      </span>
+    </div>
+
+    <div class="route">
+      {% if c.src_preset %}<img src="{{ url_for('static', filename='img/' ~ c.src_preset.icon) }}" alt="">{% endif %}
+      <span>{{ c.src }}</span>
+      <span>→</span>
+      {% if c.dst_preset %}<img src="{{ url_for('static', filename='img/' ~ c.dst_preset.icon) }}" alt="">{% endif %}
+      <span>{{ c.dst }}</span>
+    </div>
+
+    <div class="stat-row">
+      <div><b>{{ c.counts.total }}</b><span class="muted">ящиков</span></div>
+      <div><b>{{ c.counts.ok }}</b><span class="muted">доступны</span></div>
+      <div><b>{{ c.counts.failed }}</b><span class="muted">с ошибкой</span></div>
+      <div><b>{{ c.counts.size | human_size }}</b><span class="muted">объём</span></div>
+    </div>
+
+    <div class="small muted">
+      Автор: {{ c.author }} · создан {{ c.created_at | local_time('%d.%m.%Y') }}
+      {% if c.credentials_purged_at %}
+        <br><span class="badge">пароли стёрты {{ c.credentials_purged_at | local_time('%d.%m.%Y') }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Колонки и превью — imapsync-web{% endblock %}
+
+{% set titles = {
+  'src_email': 'Адрес откуда',
+  'src_password': 'Пароль откуда',
+  'dst_email': 'Адрес куда',
+  'dst_password': 'Пароль куда',
+  'note': 'Комментарий'
+} %}
+
+{% block content %}
+<h1>Колонки и превью</h1>
+<p class="muted">
+  Проект «{{ project.name }}» ·
+  файл разобран: {{ table.rows | length }} строк, кодировка {{ table.encoding }}{% if table.delimiter %}, разделитель «{{ table.delimiter }}»{% endif %}
+</p>
+
+{% for note in table.notes %}
+  <div class="notice warn small">{{ note }}</div>
+{% endfor %}
+
+<form method="post" action="{{ url_for('wizard.commit', project_id=project.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="card">
+    <h3>Что в какой колонке</h3>
+    <p class="small muted">Подставлено автоматически — проверь глазами.</p>
+    <div class="row">
+      {% for field in fields %}
+        <label>{{ titles[field] }}
+          <select name="col_{{ field }}"
+                  hx-post="{{ url_for('wizard.preview', project_id=project.id) }}"
+                  hx-include="closest form" hx-target="#preview" hx-swap="innerHTML">
+            <option value="-1">— нет —</option>
+            {% for header in table.headers %}
+              <option value="{{ loop.index0 }}"
+                      {{ 'selected' if mapping[field] == loop.index0 }}>{{ header }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endfor %}
+    </div>
+
+    <label>
+      <input type="checkbox" name="trim_passwords" value="1"
+             hx-post="{{ url_for('wizard.preview', project_id=project.id) }}"
+             hx-include="closest form" hx-target="#preview" hx-swap="innerHTML">
+      Обрезать пробелы по краям паролей
+      <span class="muted small">— невидимый хвостовой пробел даёт «неверный пароль» на ровном месте</span>
+    </label>
+  </div>
+
+  <div id="preview">
+    {% include "partials/import_preview.html" %}
+  </div>
+
+  <div class="actions">
+    <button class="primary" type="submit">Импортировать</button>
+    <a class="button" href="{{ url_for('wizard.import_list', project_id=project.id) }}">Другой файл</a>
+  </div>
+</form>
+{% endblock %}

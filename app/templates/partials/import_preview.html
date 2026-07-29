@@ -1,0 +1,53 @@
+{% set trim = trim | default(false) %}
+<div class="card">
+  <h3>Превью</h3>
+
+  {% for note in preview.notes %}
+    <div class="notice err small">{{ note }}</div>
+  {% endfor %}
+
+  {% if preview.total %}
+    <div class="stat-row" style="margin-bottom:10px">
+      <div><b>{{ preview.total }}</b><span class="muted">строк</span></div>
+      <div><b>{{ preview.importable_count }}</b><span class="muted">импортируется</span></div>
+      <div><b>{{ preview.error_count }}</b><span class="muted">с ошибками</span></div>
+      <div><b>{{ preview.whitespace_count }}</b><span class="muted">с пробелом в пароле</span></div>
+    </div>
+
+    {% if preview.whitespace_count and not trim %}
+      <div class="notice warn small">
+        В {{ preview.whitespace_count }} паролях есть пробел в начале или в конце.
+        Глазами его не видно, а логин с ним не пройдёт. Поставь галку «обрезать пробелы».
+      </div>
+    {% endif %}
+
+    <div class="table-wrap" style="max-height:420px;overflow-y:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Откуда</th><th>Пароль</th><th>Куда</th><th>Пароль</th>
+            <th>Комментарий</th><th>Замечания</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in preview.rows %}
+          <tr class="{{ 'bad' if not row.importable else ('warn' if row.issues else '') }}">
+            <td class="muted">{{ row.number }}</td>
+            <td>{{ row.src_email }}</td>
+            {# Пароль не показываем никому и никогда — только факт наличия. #}
+            <td>{{ '••••' if row.src_password else '—' }}</td>
+            <td>{{ row.dst_email }}</td>
+            <td>{{ '••••' if row.dst_password else '—' }}</td>
+            <td class="muted">{{ row.note }}</td>
+            <td class="small">
+              {% for issue in row.issues %}
+                <div class="{{ 'muted' if issue.severity != 'error' }}">{{ issue.message }}</div>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>

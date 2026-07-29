@@ -1,0 +1,10 @@
+<div class="feed">
+  {% for e in events %}
+    <div class="feed-line {{ e.level }}">
+      <span class="ts">{{ e.ts | local_time('%d.%m %H:%M:%S') }}</span>
+      <span class="msg">{{ e.message }}</span>
+    </div>
+  {% else %}
+    <div class="muted small">Пока ничего не происходило.</div>
+  {% endfor %}
+</div>

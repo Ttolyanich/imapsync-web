@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Вход — imapsync-web{% endblock %}
+
+{% block anon %}
+<div class="login-page">
+  <form class="card login-card" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <h1>imapsync-web</h1>
+    <p class="muted">Панель миграции почтовых ящиков</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, text in messages %}
+        <div class="flash flash-{{ category }}">{{ text }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <label>Логин
+      <input name="username" value="{{ username }}" autocomplete="username" autofocus required>
+    </label>
+    <label>Пароль
+      <input name="password" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="primary" type="submit">Войти</button>
+  </form>
+</div>
+{% endblock %}

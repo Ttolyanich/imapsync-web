@@ -1,0 +1,107 @@
+{% set only_failed = only_failed | default(false) %}
+<div class="card">
+  <div class="page-head">
+    <h3 style="margin:0">Ящики</h3>
+    <div class="actions" style="margin:0">
+      <a class="button {{ 'primary' if not only_failed }}"
+         hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id) }}"
+         hx-target="#mailboxes" href="#">Все</a>
+      <a class="button {{ 'primary' if only_failed }}"
+         hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, failed=1) }}"
+         hx-target="#mailboxes" href="#">Только упавшие</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Откуда</th><th>Куда</th><th>Источник</th><th>Приёмник</th>
+          <th>Перенос</th><th>Писем</th><th>Объём</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="{{ 'bad' if r.status == 'check_failed' else ('warn' if r.quota_warning else '') }}">
+          <td>
+            {{ r.src_email }}
+            {% if r.note %}<div class="muted small">{{ r.note }}</div>{% endif %}
+          </td>
+          <td>{{ r.dst_email }}</td>
+          <td>
+            {% if r.src_result == 'ok' %}<span class="badge ok">доступ есть</span>
+            {% elif r.src_result %}<span class="badge err">{{ r.src_message }}</span>
+            {% else %}<span class="muted small">не проверялся</span>{% endif %}
+          </td>
+          <td>
+            {% if r.dst_result == 'ok' %}<span class="badge ok">доступ есть</span>
+            {% elif r.dst_result %}<span class="badge err">{{ r.dst_message }}</span>
+            {% else %}<span class="muted small">не проверялся</span>{% endif %}
+          </td>
+          <td style="min-width:150px">
+            {% if r.status in ('running', 'done', 'failed', 'queued') %}
+              <div class="bar mini"><span style="width: {{ r.percent }}%"></span></div>
+              <div class="small muted">
+                {% if r.status == 'running' %}
+                  идёт{% if r.current_folder %} · {{ r.current_folder }}{% endif %}
+                {% elif r.status == 'queued' %}в очереди
+                {% elif r.status == 'done' %}перенесён
+                {% else %}<span style="color:var(--err)">{{ r.exit_message or 'ошибка' }}</span>
+                {% endif %}
+                · {{ r.done_messages | human_count }} писем
+              </div>
+            {% else %}
+              <span class="muted small">не начинался</span>
+            {% endif %}
+          </td>
+          <td>{{ r.total_messages | human_count }}</td>
+          <td>
+            {{ r.total_bytes | human_size }}
+            {% if r.quota_warning %}
+              <div class="small" style="color:var(--warn)">не влезет в квоту приёмника</div>
+            {% endif %}
+          </td>
+          <td class="small">
+            {% if r.auth_locked %}
+              <div class="badge warn">повторные попытки заблокированы</div>
+              <div class="muted">попыток входа: {{ r.attempts }}</div>
+              {% if can_edit %}
+                <form method="post" style="margin-top:4px"
+                      action="{{ url_for('projects.unlock_mailbox', project_id=project_id, mailbox_id=r.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="link" type="submit">снять блокировку</button>
+                </form>
+              {% endif %}
+            {% endif %}
+            {% if r.hint %}<div class="muted">{{ r.hint }}</div>{% endif %}
+            {% if r.has_log %}
+              <a href="{{ url_for('projects.view', project_id=project_id,
+                                  tab='log', mailbox=r.id) }}">лог</a>
+            {% endif %}
+            {% if can_edit and r.status in ('done', 'failed') %}
+              <form method="post" style="margin-top:4px"
+                    action="{{ url_for('projects.mailbox_resync', project_id=project_id, mailbox_id=r.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="link" type="submit">досинхронить</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="muted">
+          {{ 'Упавших ящиков нет.' if only_failed else 'Список пуст — импортируй ящики.' }}
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if rows and rows | selectattr('auth_locked') | list %}
+    <div class="notice warn small">
+      У части ящиков стоит защита от повторных попыток: логин уже падал по паролю.
+      В домене обычно пять неудачных попыток до блокировки учётной записи на час,
+      поэтому повторная проверка такие строки пропускает. Исправь пароль или сними
+      блокировку вручную.
+    </div>
+  {% endif %}
+</div>

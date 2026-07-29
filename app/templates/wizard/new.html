@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Новый проект — imapsync-web{% endblock %}
+
+{% block content %}
+<h1>Новый проект</h1>
+<p class="muted">Шаг 1 из 4 — название</p>
+
+<form class="card" method="post" style="max-width:520px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label>Название проекта
+    <input name="name" placeholder="Переезд с Mail.ru на Exchange" autofocus required>
+  </label>
+  <p class="small muted">
+    По названию проект будут искать через полгода, когда придут с вопросом
+    «а что мы тогда переносили». Пиши так, чтобы было понятно без тебя.
+  </p>
+  <div class="actions">
+    <button class="primary" type="submit">Дальше</button>
+    <a class="button" href="{{ url_for('projects.index') }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,19 @@
+.env
+*.pyc
+__pycache__/
+.venv/
+venv/
+data/
+*.db
+*.db-wal
+*.db-shm
+*.log
+*.log.gz
+.idea/
+.vscode/
+.DS_Store
+
+# Боевые списки ящиков сюда попадать не должны никогда.
+*.csv
+*.xlsx
+!docs/example.csv

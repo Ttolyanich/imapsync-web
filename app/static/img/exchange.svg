@@ -1,0 +1,8 @@
+<!-- Собственная нейтральная иконка, не логотип продукта. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" role="img" aria-label="Exchange">
+  <rect width="40" height="40" rx="9" fill="#2f81f7" fill-opacity="0.12"/>
+  <rect x="9" y="10" width="22" height="9" rx="2.5" fill="none" stroke="#2f81f7" stroke-width="2"/>
+  <rect x="9" y="21" width="22" height="9" rx="2.5" fill="none" stroke="#2f81f7" stroke-width="2"/>
+  <circle cx="13.5" cy="14.5" r="1.5" fill="#2f81f7"/>
+  <circle cx="13.5" cy="25.5" r="1.5" fill="#2f81f7"/>
+</svg>
