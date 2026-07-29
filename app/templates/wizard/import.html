@@ -2,43 +2,68 @@
 {% block title %}Список ящиков — imapsync-web{% endblock %}
 
 {% block content %}
-<h1>Список ящиков</h1>
-<p class="muted">Проект «{{ project.name }}» · шаг 4 из 4</p>
+<div class="page-head">
+  <div>
+    <h1>Импорт списка ящиков</h1>
+    <div class="muted small">Проект «{{ project.name }}»</div>
+  </div>
+</div>
+
+<div class="wizard-steps">
+  <div class="step-item done">
+    <span class="step-number">✓</span>
+    <span>Название</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item done">
+    <span class="step-number">✓</span>
+    <span>Источник</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item done">
+    <span class="step-number">✓</span>
+    <span>Приёмник</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item active">
+    <span class="step-number">4</span>
+    <span>Ящики</span>
+  </div>
+</div>
 
 <form class="card" method="post" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="mode" value="file">
-  <h3>Загрузить файл</h3>
-  <label>CSV или xlsx
+  <h3>Загрузить файл ящиков</h3>
+  <label>Файл CSV или XLSX
     <input type="file" name="file" accept=".csv,.txt,.xlsx,.xlsm" required>
   </label>
   <p class="small muted">
-    Кодировка и разделитель определяются сами (в том числе Excel-овские cp1251
-    и «;»). Заголовок не обязателен — колонки можно будет указать вручную.
-    <b>xlsx надёжнее CSV</b>: в нём попросту нет проблемы кодировок.
+    Поддерживаются файлы Excel (.xlsx) и текстовые таблицы (.csv) в любой кодировке.
   </p>
-  <div class="actions">
-    <button class="primary" type="submit">Загрузить</button>
+  <div class="actions" style="margin-top:var(--space-4)">
+    <button class="primary" type="submit">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+      Загрузить и сопоставить
+    </button>
   </div>
 </form>
 
 <form class="card" method="post">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="mode" value="generate">
-  <h3>Или построить по шаблону</h3>
+  <h3>Или построить список по шаблону</h3>
   <p class="small muted">
-    При переезде домена список нужен только для исключений: остальное строится
-    правилом. Пароли в этом случае задаются на сервере (мастер-доступ) либо
-    дописываются позже.
+    Используется, если адреса источник/приёмник строятся по регулярному правилу.
   </p>
-  <label>Адреса источника, по одному в строке
-    <textarea name="addresses" placeholder="ivanov@mail.ru&#10;petrov@mail.ru"></textarea>
+  <label>Адреса источника (по одному в строке)
+    <textarea name="addresses" placeholder="user1@mail.ru&#10;user2@mail.ru"></textarea>
   </label>
-  <label>Шаблон адреса приёмника
+  <label style="margin-top:var(--space-3)">Шаблон адреса приёмника
     <input name="template" value="{local}@newdomain.ru">
   </label>
-  <p class="small muted">Подстановки: <code>{local}</code>, <code>{domain}</code>, <code>{email}</code></p>
-  <div class="actions">
+  <p class="small muted">Доступные подстановки: <code>{local}</code>, <code>{domain}</code>, <code>{email}</code></p>
+  <div class="actions" style="margin-top:var(--space-4)">
     <button type="submit">Построить список</button>
   </div>
 </form>

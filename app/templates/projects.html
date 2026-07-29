@@ -3,25 +3,37 @@
 
 {% block content %}
 <div class="page-head">
-  <h1>Проекты</h1>
-  <a class="button primary" href="{{ url_for('wizard.new') }}">Новый проект</a>
+  <div>
+    <h1>Проекты миграции</h1>
+    <div class="muted small">Управление переносом почтовых ящиков и история прогонов</div>
+  </div>
+  <a class="button primary" href="{{ url_for('wizard.new') }}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    Новый проект
+  </a>
 </div>
 
 {% if not cards %}
-  <div class="card">
-    <p>Проектов пока нет.</p>
-    <p class="muted small">
-      Проект — это одна миграция: пара серверов и список ящиков. Начни с нового
-      проекта, панель проведёт по шагам: откуда, куда, список, проверка доступов.
+  <div class="card" style="padding:var(--space-6);text-align:center;max-width:600px;margin:40px auto">
+    <div style="width:48px;height:48px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;margin-bottom:var(--space-3)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+    </div>
+    <h3>Проектов пока нет</h3>
+    <p class="muted small" style="max-width:440px;margin:0 auto var(--space-4)">
+      Проект объединяет пару почтовых серверов и список ящиков. Нажмите «Новый проект», и пошаговый мастер поможет настроить подключение и импортировать список.
     </p>
+    <a class="button primary" href="{{ url_for('wizard.new') }}">Создать первый проект</a>
   </div>
 {% else %}
 <div class="grid">
   {% for c in cards %}
   <div class="card project-card">
     <div class="page-head">
-      <a href="{{ url_for('projects.view', project_id=c.id) }}"><b>{{ c.name }}</b></a>
-      <span class="badge {{ 'ok' if c.status == 'done' else '' }}">
+      <a href="{{ url_for('projects.view', project_id=c.id) }}" style="font-size:16px;color:var(--ink)">
+        <b>{{ c.name }}</b>
+      </a>
+      <span class="badge {{ 'ok' if c.status == 'done' else ('warn' if c.status == 'running' else '') }}">
+        <span class="badge-dot"></span>
         {{ {'draft': 'черновик', 'ready': 'готов', 'running': 'идёт', 'paused': 'пауза',
             'done': 'завершён'}.get(c.status, c.status) }}
       </span>
@@ -29,23 +41,23 @@
 
     <div class="route">
       {% if c.src_preset %}<img src="{{ url_for('static', filename='img/' ~ c.src_preset.icon) }}" alt="">{% endif %}
-      <span>{{ c.src }}</span>
-      <span>→</span>
+      <span><b>{{ c.src }}</b></span>
+      <span class="muted" style="margin:0 2px">→</span>
       {% if c.dst_preset %}<img src="{{ url_for('static', filename='img/' ~ c.dst_preset.icon) }}" alt="">{% endif %}
-      <span>{{ c.dst }}</span>
+      <span><b>{{ c.dst }}</b></span>
     </div>
 
     <div class="stat-row">
       <div><b>{{ c.counts.total }}</b><span class="muted">ящиков</span></div>
-      <div><b>{{ c.counts.ok }}</b><span class="muted">доступны</span></div>
-      <div><b>{{ c.counts.failed }}</b><span class="muted">с ошибкой</span></div>
+      <div><b style="color:var(--ok)">{{ c.counts.ok }}</b><span class="muted">доступны</span></div>
+      <div><b style="color:{{ 'var(--err)' if c.counts.failed else 'var(--ink)' }}">{{ c.counts.failed }}</b><span class="muted">с ошибкой</span></div>
       <div><b>{{ c.counts.size | human_size }}</b><span class="muted">объём</span></div>
     </div>
 
-    <div class="small muted">
-      Автор: {{ c.author }} · создан {{ c.created_at | local_time('%d.%m.%Y') }}
+    <div class="small muted" style="border-top:1px solid var(--line);padding-top:var(--space-2);margin-top:auto">
+      Автор: {{ c.author }} · {{ c.created_at | local_time('%d.%m.%Y') }}
       {% if c.credentials_purged_at %}
-        <br><span class="badge">пароли стёрты {{ c.credentials_purged_at | local_time('%d.%m.%Y') }}</span>
+        · <span class="badge" style="font-size:11px;padding:1px 6px">пароли стёрты {{ c.credentials_purged_at | local_time('%d.%m.%Y') }}</span>
       {% endif %}
     </div>
   </div>

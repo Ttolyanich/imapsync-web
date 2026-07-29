@@ -2,38 +2,40 @@
 {% block title %}Настройки — imapsync-web{% endblock %}
 
 {% block content %}
-<h1>Настройки</h1>
+<div class="page-head">
+  <div>
+    <h1>Настройки панели</h1>
+    <div class="muted small">Безопасность, учетные записи и журнал действий</div>
+  </div>
+</div>
 
-<div class="card" style="max-width:520px">
-  <h3>Мой пароль</h3>
+<div class="card" style="max-width:560px">
+  <h3>Смена пароля</h3>
   <p class="small muted">
-    Пароль администратора из <code>.env</code> действует только при первом
-    запуске. Дальше он меняется здесь — иначе в файле на диске остался бы
-    вечный доступ, который нельзя отозвать.
+    Смените текущий пароль учетной записи.
   </p>
   <form method="post" action="{{ url_for('settings.change_password') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Текущий пароль
       <input type="password" name="current_password" autocomplete="current-password" required>
     </label>
-    <label>Новый пароль
+    <label style="margin-top:var(--space-3)">Новый пароль
       <input type="password" name="new_password" autocomplete="new-password" required>
     </label>
-    <label>Ещё раз
+    <label style="margin-top:var(--space-3)">Подтверждение пароля
       <input type="password" name="repeat_password" autocomplete="new-password" required>
     </label>
-    <div class="actions"><button class="primary" type="submit">Сменить пароль</button></div>
+    <div class="actions" style="margin-top:var(--space-4)">
+      <button class="primary" type="submit">Сменить пароль</button>
+    </div>
   </form>
 </div>
 
 {% if current_user().is_admin %}
 <div class="card">
-  <h3>Пользователи</h3>
+  <h3>Пользователи панели</h3>
   <p class="small muted">
-    Оператор ведёт свои проекты целиком, а чужие видит, но не запускает и не
-    правит: миграции передают друг другу, и полная изоляция мешала бы больше,
-    чем защищала. Пароли почтовых ящиков не показываются никому, включая
-    администратора.
+    Операторы ведут свои проекты, но могут просматривать чужие. Пароли почтовых ящиков скрыты от всех.
   </p>
 
   <div class="table-wrap">
@@ -46,17 +48,17 @@
         <tr class="{{ '' if u.is_active else 'warn' }}">
           <td>
             <b>{{ u.username }}</b>
-            {% if u.is_me %}<span class="muted small">— это ты</span>{% endif %}
-            {% if not u.is_active %}<span class="badge warn">отключён</span>{% endif %}
+            {% if u.is_me %}<span class="muted small">— вы</span>{% endif %}
+            {% if not u.is_active %}<span class="badge warn"><span class="badge-dot"></span>отключён</span>{% endif %}
           </td>
           <td>
             {% if u.is_me %}
-              {{ u.role_title }}
+              <span class="badge ok">{{ u.role_title }}</span>
             {% else %}
               <div class="actions">
                 <form method="post" action="{{ url_for('settings.change_role', user_id=u.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <select name="role">
+                  <select name="role" style="min-width:120px">
                     {% for value, title in roles.items() %}
                       <option value="{{ value }}" {{ 'selected' if u.role == value }}>{{ title }}</option>
                     {% endfor %}
@@ -69,8 +71,6 @@
           <td class="small muted">{{ u.created_at | local_time('%d.%m.%Y') }}</td>
           <td class="small muted">{{ u.last_login_at | local_time }}</td>
           <td>
-            {# Над собой в этой таблице действий нет: свой пароль меняется
-               в блоке «Мой пароль», а отключить себя нельзя вовсе. #}
             {% if u.is_me %}
               <span class="muted small">свои настройки — выше</span>
             {% else %}
@@ -93,11 +93,11 @@
     </table>
   </div>
 
-  <h3>Добавить пользователя</h3>
+  <h3 style="margin-top:var(--space-5)">Добавить пользователя</h3>
   <form method="post" action="{{ url_for('settings.create_user') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="row">
-      <label>Логин <input name="username" required></label>
+      <label>Логин <input name="username" required placeholder="ivanov"></label>
       <label>Роль
         <select name="role">
           {% for value, title in roles.items() %}
@@ -107,36 +107,34 @@
       </label>
       <label>Пароль
         <input type="password" name="password" autocomplete="new-password"
-               placeholder="оставь пустым — сгенерирую">
+               placeholder="Оставьте пустым для автогенерации">
       </label>
     </div>
-    <div class="actions"><button class="primary" type="submit">Создать</button></div>
+    <div class="actions" style="margin-top:var(--space-4)"><button class="primary" type="submit">Создать пользователя</button></div>
   </form>
 </div>
 
 <div class="card">
-  <h3>Журнал действий</h3>
+  <h3>Журнал аудита</h3>
   <p class="small muted">
-    Для инструмента, который ходит в чужую почту, это не бюрократия, а ответ
-    на вопрос «кто качал ящик директора». Записи остаются, даже если
-    пользователя потом удалили.
+    История ключевых действий пользователей в системе.
   </p>
   <div class="table-wrap" style="max-height:520px;overflow-y:auto">
     <table>
       <thead>
-        <tr><th>Когда</th><th>Кто</th><th>Что</th><th>Объект</th><th>Подробности</th></tr>
+        <tr><th>Время</th><th>Пользователь</th><th>Действие</th><th>Объект</th><th>Подробности</th></tr>
       </thead>
       <tbody>
         {% for e in entries %}
         <tr>
-          <td class="small muted" style="white-space:nowrap">{{ e.ts | local_time('%d.%m %H:%M') }}</td>
-          <td>{{ e.username }}</td>
-          <td>{{ e.action }}</td>
+          <td class="small muted" style="white-space:nowrap;font-family:ui-monospace,monospace">{{ e.ts | local_time('%d.%m %H:%M') }}</td>
+          <td><b>{{ e.username }}</b></td>
+          <td><span class="badge">{{ e.action }}</span></td>
           <td class="small muted">{{ e.target }}</td>
           <td class="small muted">{{ e.details }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" class="muted">Пока пусто.</td></tr>
+        <tr><td colspan="5" class="muted">Журнал пока пуст.</td></tr>
         {% endfor %}
       </tbody>
     </table>

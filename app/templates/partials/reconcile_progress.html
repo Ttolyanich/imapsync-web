@@ -1,14 +1,16 @@
 {% if progress %}
-<div class="bar-labels">
-  <span>
-    {% if progress.running %}Опрашиваю приёмник{% else %}Сверка завершена{% endif %}
-    {% if progress.current %}<span class="muted">· {{ progress.current }}</span>{% endif %}
-  </span>
-  <span class="muted">{{ progress.percent }}%</span>
-</div>
-<div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
-<div class="small muted" style="margin-top:6px">
-  опрошено {{ progress.checked }} из {{ progress.total }}
-  {% if progress.failed %} · недоступно {{ progress.failed }}{% endif %}
+<div style="margin-top:var(--space-3)">
+  <div class="bar-labels">
+    <span>
+      <b>{% if progress.running %}Опрос приёмника…{% else %}Сверка завершена{% endif %}</b>
+      {% if progress.current %}<span class="muted">· {{ progress.current }}</span>{% endif %}
+    </span>
+    <span style="color:var(--accent);font-weight:700">{{ progress.percent }}%</span>
+  </div>
+  <div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
+  <div class="small muted" style="margin-top:6px">
+    опрошено {{ progress.checked }} из {{ progress.total }}
+    {% if progress.failed %} · недоступно {{ progress.failed }}{% endif %}
+  </div>
 </div>
 {% endif %}

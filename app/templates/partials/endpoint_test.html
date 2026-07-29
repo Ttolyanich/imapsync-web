@@ -1,10 +1,10 @@
-<div class="notice {{ '' if ok else 'err' }} small">
-  {{ message }}
-  {% if hint %}<div class="muted">{{ hint }}</div>{% endif %}
+<div class="notice {{ 'ok' if ok else 'err' }} small" style="margin-top:var(--space-2)">
+  <b>{{ message }}</b>
+  {% if hint %}<div class="muted" style="margin-top:4px">{{ hint }}</div>{% endif %}
   {% if capabilities %}
-    <div class="muted">
-      Сервер объявляет:
-      {{ capabilities | join(', ') }}
+    <div class="muted" style="margin-top:4px">
+      Возможности сервера:
+      <code>{{ capabilities | join(', ') }}</code>
     </div>
   {% endif %}
 </div>

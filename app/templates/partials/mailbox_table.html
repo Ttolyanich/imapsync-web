@@ -1,14 +1,14 @@
 {% set only_failed = only_failed | default(false) %}
 <div class="card">
   <div class="page-head">
-    <h3 style="margin:0">Ящики</h3>
+    <h3 style="margin:0">Список почтовых ящиков</h3>
     <div class="actions" style="margin:0">
       <a class="button {{ 'primary' if not only_failed }}"
          hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id) }}"
          hx-target="#mailboxes" href="#">Все</a>
       <a class="button {{ 'primary' if only_failed }}"
          hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, failed=1) }}"
-         hx-target="#mailboxes" href="#">Только упавшие</a>
+         hx-target="#mailboxes" href="#">Только с ошибкой</a>
     </div>
   </div>
 
@@ -24,29 +24,29 @@
         {% for r in rows %}
         <tr class="{{ 'bad' if r.status == 'check_failed' else ('warn' if r.quota_warning else '') }}">
           <td>
-            {{ r.src_email }}
+            <b>{{ r.src_email }}</b>
             {% if r.note %}<div class="muted small">{{ r.note }}</div>{% endif %}
           </td>
-          <td>{{ r.dst_email }}</td>
+          <td><b>{{ r.dst_email }}</b></td>
           <td>
-            {% if r.src_result == 'ok' %}<span class="badge ok">доступ есть</span>
-            {% elif r.src_result %}<span class="badge err">{{ r.src_message }}</span>
+            {% if r.src_result == 'ok' %}<span class="badge ok"><span class="badge-dot"></span>доступ есть</span>
+            {% elif r.src_result %}<span class="badge err"><span class="badge-dot"></span>{{ r.src_message }}</span>
             {% else %}<span class="muted small">не проверялся</span>{% endif %}
           </td>
           <td>
-            {% if r.dst_result == 'ok' %}<span class="badge ok">доступ есть</span>
-            {% elif r.dst_result %}<span class="badge err">{{ r.dst_message }}</span>
+            {% if r.dst_result == 'ok' %}<span class="badge ok"><span class="badge-dot"></span>доступ есть</span>
+            {% elif r.dst_result %}<span class="badge err"><span class="badge-dot"></span>{{ r.dst_message }}</span>
             {% else %}<span class="muted small">не проверялся</span>{% endif %}
           </td>
-          <td style="min-width:150px">
+          <td style="min-width:160px">
             {% if r.status in ('running', 'done', 'failed', 'queued') %}
               <div class="bar mini"><span style="width: {{ r.percent }}%"></span></div>
-              <div class="small muted">
+              <div class="small muted" style="margin-top:4px">
                 {% if r.status == 'running' %}
-                  идёт{% if r.current_folder %} · {{ r.current_folder }}{% endif %}
+                  <span style="color:var(--accent);font-weight:600">идёт</span>{% if r.current_folder %} · {{ r.current_folder }}{% endif %}
                 {% elif r.status == 'queued' %}в очереди
-                {% elif r.status == 'done' %}перенесён
-                {% else %}<span style="color:var(--err)">{{ r.exit_message or 'ошибка' }}</span>
+                {% elif r.status == 'done' %}<span style="color:var(--ok);font-weight:600">перенесён</span>
+                {% else %}<span style="color:var(--err);font-weight:600">{{ r.exit_message or 'ошибка' }}</span>
                 {% endif %}
                 · {{ r.done_messages | human_count }} писем
               </div>
@@ -58,13 +58,13 @@
           <td class="num">
             {{ r.total_bytes | human_size }}
             {% if r.quota_warning %}
-              <div class="small" style="color:var(--warn)">не влезет в квоту приёмника</div>
+              <div class="small" style="color:var(--warn);font-weight:500">не влезет в квоту</div>
             {% endif %}
           </td>
           <td class="small">
             {% if r.auth_locked %}
-              <div class="badge warn">повторные попытки заблокированы</div>
-              <div class="muted">попыток входа: {{ r.attempts }}</div>
+              <div class="badge warn"><span class="badge-dot"></span>попытки заблокированы</div>
+              <div class="muted">попыток: {{ r.attempts }}</div>
               {% if can_edit %}
                 <form method="post" style="margin-top:4px"
                       action="{{ url_for('projects.unlock_mailbox', project_id=project_id, mailbox_id=r.id) }}">
@@ -75,8 +75,7 @@
             {% endif %}
             {% if r.hint %}<div class="muted">{{ r.hint }}</div>{% endif %}
             {% if r.has_log %}
-              <a href="{{ url_for('projects.view', project_id=project_id,
-                                  tab='log', mailbox=r.id) }}">лог</a>
+              <a href="{{ url_for('projects.view', project_id=project_id, tab='log', mailbox=r.id) }}">лог</a>
             {% endif %}
             {% if can_edit and r.status in ('done', 'failed') %}
               <form method="post" style="margin-top:4px"
@@ -88,8 +87,8 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="8" class="muted">
-          {{ 'Упавших ящиков нет.' if only_failed else 'Список пуст — импортируй ящики.' }}
+        <tr><td colspan="8" class="muted" style="text-align:center;padding:var(--space-4)">
+          {{ 'Упавших ящиков нет.' if only_failed else 'Список пуст — импортируйте ящики.' }}
         </td></tr>
         {% endfor %}
       </tbody>
@@ -98,10 +97,7 @@
 
   {% if rows and rows | selectattr('auth_locked') | list %}
     <div class="notice warn small">
-      У части ящиков стоит защита от повторных попыток: логин уже падал по паролю.
-      В домене обычно пять неудачных попыток до блокировки учётной записи на час,
-      поэтому повторная проверка такие строки пропускает. Исправь пароль или сними
-      блокировку вручную.
+      У части ящиков стоит защита от повторных попыток из-за ошибок авторизации. Снимите блокировку вручную после исправления пароля.
     </div>
   {% endif %}
 </div>

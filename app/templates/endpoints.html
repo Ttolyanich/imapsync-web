@@ -3,20 +3,21 @@
 
 {% block content %}
 <div class="page-head">
-  <h1>Почтовые серверы</h1>
+  <div>
+    <h1>Почтовые серверы</h1>
+    <div class="muted small">Настройки подключения к источникам и приёмникам почты</div>
+  </div>
   {% if current_user().is_admin %}
-    <a class="button primary" href="{{ url_for('endpoints.create') }}">Добавить сервер</a>
+    <a class="button primary" href="{{ url_for('endpoints.create') }}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Добавить сервер
+    </a>
   {% endif %}
 </div>
 
-<p class="muted small">
-  Настройки подключения хранятся здесь, а не в списке ящиков. Поэтому при смене
-  схемы доступа не приходится переделывать выгрузку на двести строк.
-</p>
-
 {% if current_user().is_admin %}
 <div class="card">
-  <h3>Добавить из пресета</h3>
+  <h3>Добавить из готового пресета</h3>
   <div class="tiles">
     {% for p in presets.values() %}
       <a class="tile" href="{{ url_for('endpoints.create', preset=p.id) }}">
@@ -24,7 +25,7 @@
         <span>
           <span class="tile-name">{{ p.name }}</span>
           {% if p.host %}<span class="tile-host">{{ p.host }}</span>{% endif %}
-          {% if not p.verified %}<span class="unverified">не проверен на живом сервере</span>{% endif %}
+          {% if not p.verified %}<span class="unverified">требует проверки</span>{% endif %}
         </span>
       </a>
     {% endfor %}
@@ -37,29 +38,44 @@
   <table>
     <thead>
       <tr>
-        <th></th><th>Название</th><th>Адрес</th><th>Аутентификация</th>
-        <th>Потоков</th><th></th>
+        <th style="width:36px"></th>
+        <th>Название</th>
+        <th>Адрес и порт</th>
+        <th>Аутентификация</th>
+        <th>Потоков</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       {% for e in endpoints %}
       <tr>
-        <td>{% if e.preset %}<img src="{{ url_for('static', filename='img/' ~ e.preset.icon) }}"
-                                  alt="" width="24" height="24">{% endif %}</td>
+        <td style="text-align:center">
+          {% if e.preset %}
+            <img src="{{ url_for('static', filename='img/' ~ e.preset.icon) }}" alt="" width="24" height="24" style="object-fit:contain">
+          {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="muted"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+          {% endif %}
+        </td>
         <td><b>{{ e.name }}</b></td>
-        <td>{{ e.host }}:{{ e.port }} <span class="muted small">{{ e.security }}</span></td>
+        <td>
+          <code>{{ e.host }}:{{ e.port }}</code>
+          <span class="badge" style="margin-left:4px;font-size:11px">{{ e.security }}</span>
+        </td>
         <td>
           {{ e.auth_mode }}
-          {% if e.has_secret %}<span class="badge ok">секрет задан</span>{% endif %}
+          {% if e.has_secret %}<span class="badge ok"><span class="badge-dot"></span>секрет задан</span>{% endif %}
         </td>
-        <td>{{ e.max_parallel }}</td>
+        <td class="num"><b>{{ e.max_parallel }}</b></td>
         <td>
           <div class="actions">
             <form method="post" action="{{ url_for('endpoints.test', endpoint_id=e.id) }}"
                   hx-post="{{ url_for('endpoints.test', endpoint_id=e.id) }}"
                   hx-target="#test-{{ e.id }}" hx-swap="innerHTML">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Проверить связь</button>
+              <button type="submit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                Проверить связь
+              </button>
             </form>
             {% if current_user().is_admin %}
               <a class="button" href="{{ url_for('endpoints.edit', endpoint_id=e.id) }}">Изменить</a>
@@ -67,8 +83,6 @@
           </div>
         </td>
       </tr>
-      {# Результат проверки — отдельной строкой во всю ширину. Внутри ячейки
-         с кнопками он раздувал колонку, и строки таблицы разъезжались. #}
       <tr class="test-result">
         <td colspan="6"><div id="test-{{ e.id }}"></div></td>
       </tr>

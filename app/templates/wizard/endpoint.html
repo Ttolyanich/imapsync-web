@@ -2,36 +2,67 @@
 {% block title %}{{ title }} — imapsync-web{% endblock %}
 
 {% block content %}
-<h1>{{ title }}</h1>
-<p class="muted">
-  Проект «{{ project.name }}» · шаг {{ 2 if side == 'source' else 3 }} из 4
-</p>
+{% set is_src = side == 'source' %}
+<div class="page-head">
+  <div>
+    <h1>{{ title }}</h1>
+    <div class="muted small">Проект «{{ project.name }}»</div>
+  </div>
+</div>
+
+<div class="wizard-steps">
+  <div class="step-item done">
+    <span class="step-number">✓</span>
+    <span>Название</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item {{ 'active' if is_src else 'done' }}">
+    <span class="step-number">{{ '2' if is_src else '✓' }}</span>
+    <span>Источник</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item {{ 'active' if not is_src else '' }}">
+    <span class="step-number">3</span>
+    <span>Приёмник</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item">
+    <span class="step-number">4</span>
+    <span>Ящики</span>
+  </div>
+</div>
 
 {% if options %}
 <form class="card" method="post">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <h3>Уже настроенные серверы</h3>
-  {% for o in options %}
-    <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <input type="radio" name="endpoint_id" value="{{ o.id }}"
-             {{ 'checked' if selected == o.id }} style="width:auto;margin:0">
-      {% if o.preset %}<img src="{{ url_for('static', filename='img/' ~ o.preset.icon) }}"
-                            alt="" width="24" height="24">{% endif %}
-      <span style="color:var(--ink)">
-        <b>{{ o.name }}</b>
-        <span class="muted small">{{ o.host }}:{{ o.port }}</span>
-      </span>
-    </label>
-  {% endfor %}
+  <div style="display:flex;flex-direction:column;gap:var(--space-2);margin:var(--space-3) 0">
+    {% for o in options %}
+      <label style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--panel-subtle);border-radius:var(--radius-sm);cursor:pointer">
+        <input type="radio" name="endpoint_id" value="{{ o.id }}"
+               {{ 'checked' if selected == o.id }} style="width:auto;margin:0">
+        {% if o.preset %}
+          <img src="{{ url_for('static', filename='img/' ~ o.preset.icon) }}" alt="" width="24" height="24">
+        {% endif %}
+        <span style="color:var(--ink);flex:1">
+          <b>{{ o.name }}</b>
+          <span class="muted small" style="margin-left:8px"><code>{{ o.host }}:{{ o.port }}</code></span>
+        </span>
+      </label>
+    {% endfor %}
+  </div>
   <div class="actions">
-    <button class="primary" type="submit">Дальше</button>
+    <button class="primary" type="submit">
+      Продолжить
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    </button>
   </div>
 </form>
 {% endif %}
 
 {% if current_user().is_admin %}
 <div class="card">
-  <h3>{{ 'Или добавить новый' if options else 'Добавить сервер' }}</h3>
+  <h3>{{ 'Или добавить новый сервер' if options else 'Добавить сервер' }}</h3>
   <div class="tiles">
     {% for p in presets %}
       <a class="tile" href="{{ url_for('endpoints.create', preset=p.id,
@@ -45,12 +76,8 @@
       </a>
     {% endfor %}
   </div>
-  <p class="small muted">
-    Плитка подставляет адрес, порт, режим входа, имена системных папок и
-    безопасный лимит подключений. Своего сервиса нет в списке — бери «Другой IMAP».
-  </p>
 </div>
 {% else %}
-  <div class="notice small">Добавлять серверы может только администратор.</div>
+  <div class="notice small">Добавлять новые серверы может только администратор.</div>
 {% endif %}
 {% endblock %}

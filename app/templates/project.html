@@ -2,31 +2,38 @@
 {% block title %}{{ project.name }} — imapsync-web{% endblock %}
 
 {% block content %}
-{# Партиалы ниже подгружаются и отдельными запросами, где project_id приходит
-   из маршрута — здесь готовим то же имя, чтобы шаблон был один. #}
 {% set project_id = project.id %}
 <div class="page-head">
   <div>
     <h1>{{ project.name }}</h1>
-    <div class="muted small">
-      {% if src %}{{ src.name }}{% else %}сервер не выбран{% endif %}
-      → {% if dst %}{{ dst.name }}{% else %}сервер не выбран{% endif %}
-      · автор {{ project.author }}
+    <div class="muted small" style="display:flex;align-items:center;gap:6px;margin-top:2px">
+      <span>{% if src %}<b>{{ src.name }}</b>{% else %}сервер не выбран{% endif %}</span>
+      <span>→</span>
+      <span>{% if dst %}<b>{{ dst.name }}</b>{% else %}сервер не выбран{% endif %}</span>
+      <span>·</span>
+      <span>автор: {{ project.author }}</span>
     </div>
   </div>
   <div class="actions" style="margin:0">
     {% if can_edit %}
       <form method="post" action="{{ url_for('projects.check_start', project_id=project.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">Проверить доступы</button>
+        <button type="submit">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          Проверить доступы
+        </button>
       </form>
       <form method="post" action="{{ url_for('projects.migrate_start', project_id=project.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="primary" type="submit">Перенести</button>
+        <button class="primary" type="submit">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Перенести
+        </button>
       </form>
       <form method="post" action="{{ url_for('projects.migrate_resync', project_id=project.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" title="Тот же прогон повторно: поедет только то, чего нет на приёмнике">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
           Досинхронить
         </button>
       </form>
@@ -34,15 +41,15 @@
   </div>
 </div>
 
-<div class="stat-row card">
+<div class="stat-row card" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:var(--space-4)">
   <div><b>{{ counts.total }}</b><span class="muted">ящиков</span></div>
-  <div><b>{{ counts.ok }}</b><span class="muted">доступны</span></div>
-  <div><b>{{ counts.failed }}</b><span class="muted">с ошибкой</span></div>
+  <div><b style="color:var(--ok)">{{ counts.ok }}</b><span class="muted">доступны</span></div>
+  <div><b style="color:{{ 'var(--err)' if counts.failed else 'var(--ink)' }}">{{ counts.failed }}</b><span class="muted">с ошибкой</span></div>
   <div><b>{{ counts.messages | human_count }}</b><span class="muted">писем</span></div>
   <div><b>{{ counts.size | human_size }}</b><span class="muted">объём</span></div>
 </div>
 
-{# Опрос раз в 2 секунды: работает через любые прокси, переживает разрыв. #}
+{# Опрос раз в 2 секунды HTMX #}
 <div id="migrate-progress"
      hx-get="{{ url_for('projects.migrate_progress', project_id=project.id) }}"
      hx-trigger="load, every 2s" hx-swap="innerHTML"></div>
@@ -53,15 +60,12 @@
 
 {% if quota_warnings %}
   <div class="notice warn">
-    У {{ quota_warnings }} ящиков объём больше, чем свободное место на приёмнике.
-    Перенос встанет на середине — увеличь квоту до старта.
+    <b>Внимание по квоте:</b> У {{ quota_warnings }} ящиков объём больше, чем свободное место на приёмнике. Перенос может остановиться — увеличьте квоту до старта.
   </div>
 {% endif %}
 
 <div class="notice small">
-  Переносятся <b>письма и структура папок</b>. Календари, контакты, задачи,
-  правила обработки почты и автоответы протокол IMAP не переносит — их придётся
-  перенести отдельно и другими средствами.
+  Переносятся <b>письма и структура папок</b>. Календари, контакты, задачи, правила обработки почты и автоответы протокол IMAP не переносит — их переносят отдельно.
 </div>
 
 <div class="tabs">
@@ -88,23 +92,17 @@
   <div class="card">
     <h3>Соответствие папок</h3>
     <p class="small muted">
-      Таблица одна на весь проект: подтверждаешь её один раз, и она применяется
-      ко всем ящикам. Назначение папки берётся сначала из того, что объявил сам
-      сервер, и лишь потом угадывается по названию. Имя на приёмнике подставлено
-      из его пресета — благодаря этому на приёмнике не появятся одновременно
-      «Sent Items» и «Отправленные» с размазанными по ним письмами.
+      Таблица одна на весь проект: подтверждаешь её один раз, и она применяется ко всем ящикам.
     </p>
 
     {% if not folder_rows %}
       <div class="notice small">
-        Папки появятся здесь после проверки доступов: список берётся из
-        инвентаризации ящиков.
+        Папки появятся здесь после проверки доступов: список берётся из инвентаризации ящиков.
       </div>
     {% else %}
       {% if not folders_confirmed %}
         <div class="notice warn small">
-          Таблица ещё не подтверждена. Перенос будет работать и так — по этому
-          же предложению, — но лучше просмотреть его глазами до старта.
+          Таблица ещё не подтверждена. Перенос будет работать и так — по этому же предложению, — но лучше просмотреть его глазами до старта.
         </div>
       {% endif %}
 
@@ -166,21 +164,21 @@
         {% if can_edit %}
           <form method="post" action="{{ url_for('projects.reconcile_start', project_id=project.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="primary" type="submit">Сверить</button>
+            <button class="primary" type="submit">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              Сверить
+            </button>
           </form>
         {% endif %}
         <a class="button" href="{{ url_for('projects.report_xlsx', project_id=project.id) }}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Выгрузить xlsx
         </a>
       </div>
     </div>
 
     <p class="small muted">
-      Сверка заходит на приёмник и считает письма там, а не складывает наши
-      собственные счётчики переноса. Это принципиально: счётчики говорят,
-      сколько писем мы отправили, а не сколько долетело. Письмо могло быть
-      отвергнуто сервером, не пройти по размеру или попасть под политику
-      хранения — увидеть это можно только опросив приёмник.
+      Сверка заходит на приёмник и считает письма там, а не складывает наши счётчики переноса.
     </p>
 
     <div hx-get="{{ url_for('projects.reconcile_progress', project_id=project.id) }}"
@@ -199,14 +197,14 @@
       <tbody>
         {% for r in rows %}
         <tr class="{{ 'warn' if r.gap is not none and r.gap < 0 }}">
-          <td>{{ r.src_email }}</td>
+          <td><b>{{ r.src_email }}</b></td>
           <td class="num">{{ r.total_messages | human_count }}</td>
           <td class="num">{{ r.dst_total_messages | human_count }}</td>
           <td class="num">
             {% if r.gap is none %}<span class="muted">—</span>
-            {% elif r.gap == 0 %}<span class="badge ok">сходится</span>
-            {% elif r.gap < 0 %}<span class="badge warn">{{ r.gap }}</span>
-            {% else %}<span class="badge">+{{ r.gap }}</span>{% endif %}
+            {% elif r.gap == 0 %}<span class="badge ok"><span class="badge-dot"></span>сходится</span>
+            {% elif r.gap < 0 %}<span class="badge warn"><span class="badge-dot"></span>{{ r.gap }}</span>
+            {% else %}<span class="badge"><span class="badge-dot"></span>+{{ r.gap }}</span>{% endif %}
           </td>
           <td class="num">{{ r.total_bytes | human_size }}</td>
           <td class="num">{{ r.dst_total_bytes | human_size }}</td>
@@ -217,46 +215,42 @@
         {% endfor %}
       </tbody>
     </table>
-    <p class="small muted" style="margin-top:10px">
-      Плюс в разнице — не ошибка: на приёмнике могли быть свои письма до
-      переезда, а в ящик всё это время продолжает падать новая почта.
-      Тревожен именно минус.
+    <p class="small muted" style="margin-top:12px">
+      Плюс в разнице — не ошибка: на приёмнике могли быть свои письма до переезда. Тревожен именно минус.
     </p>
   </div>
 
 {% elif tab == 'log' %}
   <div class="card">
-    <h3>Что происходило</h3>
+    <h3>Лента событий</h3>
     <p class="small muted">
-      Компактная лента событий — десятки строк на ящик. Она живёт в базе всегда.
-      Подробный лог imapsync (строка на каждое письмо) лежит отдельным файлом
-      и хранится ограниченное время — выбери ящик ниже.
+      Компактная лента событий хранится в базе постоянно.
     </p>
     <div hx-get="{{ url_for('projects.events_partial', project_id=project.id) }}"
          hx-trigger="load, every 3s" hx-swap="innerHTML"></div>
   </div>
 
   <div class="card">
-    <h3>Подробный лог прогона</h3>
-    <label>Ящик
+    <h3>Подробный лог прогона imapsync</h3>
+    <label>Выберите ящик
       <select id="log-mailbox">
-        <option value="">— выбери ящик —</option>
+        <option value="">— выберите ящик —</option>
         {% for r in rows if r.has_log %}
           <option value="{{ r.id }}" {{ 'selected' if selected_mailbox == r.id }}>
             {{ r.src_email }}</option>
         {% endfor %}
       </select>
     </label>
-    <div class="actions" style="margin-bottom:10px">
-      <a class="button" id="log-download" href="#" style="display:none">Скачать лог</a>
+    <div class="actions" style="margin-bottom:12px">
+      <a class="button" id="log-download" href="#" style="display:none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Скачать лог
+      </a>
     </div>
-    <pre id="log-view" class="log-view">Выбери ящик, чтобы увидеть лог.</pre>
+    <pre id="log-view" class="log-view">Выберите ящик из списка выше, чтобы увидеть подробный лог.</pre>
   </div>
 
   <script>
-    // Опрос с позиции, а не поток: панель ставят за неизвестным прокси, и
-    // потоковые ответы регулярно ломаются о буферизацию. Разрыв здесь безвреден —
-    // следующий запрос продолжает с той же позиции.
     (function () {
       var select = document.getElementById('log-mailbox');
       var view = document.getElementById('log-view');
@@ -284,13 +278,13 @@
             }
             offset = data.offset;
           })
-          .catch(function () { /* сеть моргнула — просто попробуем в следующий раз */ });
+          .catch(function () { });
       }
 
       function switchTo(id) {
         current = id;
         offset = 0;
-        view.textContent = id ? 'Загружаю…' : 'Выбери ящик, чтобы увидеть лог.';
+        view.textContent = id ? 'Загрузка лога...' : 'Выберите ящик из списка выше, чтобы увидеть подробный лог.';
         download.style.display = id ? '' : 'none';
         if (id) download.href = urlFor(id, '/download');
         if (timer) clearInterval(timer);
@@ -306,7 +300,7 @@
   <form class="card" method="post"
         action="{{ url_for('projects.save_settings', project_id=project.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <h3>Перенос</h3>
+    <h3>Параметры переноса</h3>
 
     <label>Одновременно ящиков
       <input name="max_parallel" type="number" min="1" value="{{ project.max_parallel }}"
@@ -316,25 +310,24 @@
       Действует минимум из трёх значений: проекта и обоих серверов.
       {% if src %}«{{ src.name }}» — {{ src.max_parallel }}{% endif %}{% if dst %},
       «{{ dst.name }}» — {{ dst.max_parallel }}{% endif %}.
-      Внутри одного ящика распараллелить нельзя: imapsync идёт по папкам
-      последовательно, поэтому большой ящик поедет ровно столько, сколько поедет.
     </p>
 
     <label>
       <input type="checkbox" name="migrate_trash" {{ 'checked' if project.migrate_trash }}
              {{ 'disabled' if not can_edit }}>
       Переносить Корзину
-      <span class="muted small">— люди регулярно держат в ней нужное</span>
+      <span class="muted small">— включите, если пользователи хранят в ней письма</span>
     </label>
     <label>
       <input type="checkbox" name="migrate_spam" {{ 'checked' if project.migrate_spam }}
              {{ 'disabled' if not can_edit }}>
       Переносить Спам
-      <span class="muted small">— обычно не нужно: раздувает объём</span>
+      <span class="muted small">— обычно не требуется</span>
     </label>
 
     <label>Папки, которых нет в таблице соответствий
-      <select name="unknown_folder_policy" {{ 'disabled' if not can_edit }}>
+      <select name="unknown_folder_policy" id="unknown-folder-policy"
+              {{ 'disabled' if not can_edit }}>
         <option value="create" {{ 'selected' if project.unknown_folder_policy == 'create' }}>
           создать как есть</option>
         <option value="container" {{ 'selected' if project.unknown_folder_policy == 'container' }}>
@@ -343,7 +336,8 @@
           пропустить</option>
       </select>
     </label>
-    <label>Имя папки-контейнера
+    {# Имя контейнера нужно только одной политике из трёх. #}
+    <label id="unknown-folder-container-field" hidden>Имя папки-контейнера
       <input name="unknown_folder_container" value="{{ project.unknown_folder_container }}"
              placeholder="Импортировано" {{ 'disabled' if not can_edit }}>
     </label>
@@ -352,26 +346,32 @@
       <input name="max_message_size_mb" type="number" min="0"
              value="{{ project.max_message_size_mb }}" {{ 'disabled' if not can_edit }}>
     </label>
-    <p class="small muted">
-      0 — без ограничения. Пропущенные письма попадают в лог и в отчёт.
-      Обрезать письмо мы не умеем сознательно: это была бы тихая потеря данных,
-      которую обнаружат через год.
-    </p>
+    <p class="small muted">0 — без ограничения.</p>
 
     {% if can_edit %}
-      <div class="actions"><button class="primary" type="submit">Сохранить</button></div>
+      <div class="actions"><button class="primary" type="submit">Сохранить настройки</button></div>
     {% endif %}
   </form>
 
+  <script>
+    // Имя контейнера имеет смысл только при политике «положить внутрь папки».
+    (function () {
+      var policy = document.getElementById('unknown-folder-policy');
+      var field = document.getElementById('unknown-folder-container-field');
+      if (!policy || !field) return;
+      function apply() { field.hidden = policy.value !== 'container'; }
+      policy.addEventListener('change', apply);
+      apply();
+    })();
+  </script>
+
   {% if can_edit %}
   <div class="card">
-    <h3>Секреты и завершение</h3>
+    <h3>Управление учетными данными</h3>
     <p class="small muted">
-      Пароли нужны, пока проект идёт, и превращаются в чистый риск, когда он
-      закончен. После очистки останутся адреса, счётчики, лог и отчёты —
-      проект будет читаться как документ.
+      После завершения переезда пароли рекомендуется стереть.
       {% if project.credentials_purged_at %}
-        <br><b>Пароли уже стёрты {{ project.credentials_purged_at | local_time }}.</b>
+        <br><b style="color:var(--ok)">Пароли уже стёрты {{ project.credentials_purged_at | local_time }}.</b>
       {% endif %}
     </p>
     <div class="actions">

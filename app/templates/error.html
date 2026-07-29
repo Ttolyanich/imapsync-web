@@ -4,8 +4,8 @@
 {% macro body() %}
 <div class="card error-card">
   <h1>{{ code }}</h1>
-  <p>{{ message }}</p>
-  <a class="button" href="{{ url_for('projects.index') }}">К проектам</a>
+  <p style="font-size:16px;color:var(--ink);margin-bottom:var(--space-4)">{{ message }}</p>
+  <a class="button primary" href="{{ url_for('projects.index') }}">Вернуться к проектам</a>
 </div>
 {% endmacro %}
 

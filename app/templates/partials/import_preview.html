@@ -1,23 +1,22 @@
 {% set trim = trim | default(false) %}
 <div class="card">
-  <h3>Превью</h3>
+  <h3>Превью импорта</h3>
 
   {% for note in preview.notes %}
     <div class="notice err small">{{ note }}</div>
   {% endfor %}
 
   {% if preview.total %}
-    <div class="stat-row" style="margin-bottom:10px">
+    <div class="stat-row" style="margin-bottom:var(--space-4)">
       <div><b>{{ preview.total }}</b><span class="muted">строк</span></div>
-      <div><b>{{ preview.importable_count }}</b><span class="muted">импортируется</span></div>
-      <div><b>{{ preview.error_count }}</b><span class="muted">с ошибками</span></div>
-      <div><b>{{ preview.whitespace_count }}</b><span class="muted">с пробелом в пароле</span></div>
+      <div><b style="color:var(--ok)">{{ preview.importable_count }}</b><span class="muted">готово</span></div>
+      <div><b style="color:{{ 'var(--err)' if preview.error_count else 'var(--ink)' }}">{{ preview.error_count }}</b><span class="muted">ошибок</span></div>
+      <div><b style="color:{{ 'var(--warn)' if preview.whitespace_count else 'var(--ink)' }}">{{ preview.whitespace_count }}</b><span class="muted">пробелов в пароле</span></div>
     </div>
 
     {% if preview.whitespace_count and not trim %}
       <div class="notice warn small">
-        В {{ preview.whitespace_count }} паролях есть пробел в начале или в конце.
-        Глазами его не видно, а логин с ним не пройдёт. Поставь галку «обрезать пробелы».
+        В {{ preview.whitespace_count }} паролях обнаружен пробел на конце. Рекомендуется включить галочку «Обрезать пробелы».
       </div>
     {% endif %}
 
@@ -33,11 +32,10 @@
           {% for row in preview.rows %}
           <tr class="{{ 'bad' if not row.importable else ('warn' if row.issues else '') }}">
             <td class="muted">{{ row.number }}</td>
-            <td>{{ row.src_email }}</td>
-            {# Пароль не показываем никому и никогда — только факт наличия. #}
-            <td>{{ '••••' if row.src_password else '—' }}</td>
-            <td>{{ row.dst_email }}</td>
-            <td>{{ '••••' if row.dst_password else '—' }}</td>
+            <td><b>{{ row.src_email }}</b></td>
+            <td><code>{{ '••••••••' if row.src_password else '—' }}</code></td>
+            <td><b>{{ row.dst_email }}</b></td>
+            <td><code>{{ '••••••••' if row.dst_password else '—' }}</code></td>
             <td class="muted">{{ row.note }}</td>
             <td class="small">
               {% for issue in row.issues %}

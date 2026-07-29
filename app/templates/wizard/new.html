@@ -2,20 +2,48 @@
 {% block title %}Новый проект — imapsync-web{% endblock %}
 
 {% block content %}
-<h1>Новый проект</h1>
-<p class="muted">Шаг 1 из 4 — название</p>
+<div class="page-head">
+  <div>
+    <h1>Создание нового проекта</h1>
+    <div class="muted small">Мастер настройки миграции</div>
+  </div>
+</div>
 
-<form class="card" method="post" style="max-width:520px">
+<div class="wizard-steps">
+  <div class="step-item active">
+    <span class="step-number">1</span>
+    <span>Название</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item">
+    <span class="step-number">2</span>
+    <span>Источник</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item">
+    <span class="step-number">3</span>
+    <span>Приёмник</span>
+  </div>
+  <span class="step-divider">→</span>
+  <div class="step-item">
+    <span class="step-number">4</span>
+    <span>Ящики</span>
+  </div>
+</div>
+
+<form class="card" method="post" style="max-width:560px">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label>Название проекта
-    <input name="name" placeholder="Переезд с Mail.ru на Exchange" autofocus required>
+    <input name="name" placeholder="Например: Переезд Mail.ru → Exchange" autofocus required>
   </label>
   <p class="small muted">
-    По названию проект будут искать через полгода, когда придут с вопросом
-    «а что мы тогда переносили». Пиши так, чтобы было понятно без тебя.
+    Укажите понятное имя проекта для быстрой идентификации в будущем.
   </p>
-  <div class="actions">
-    <button class="primary" type="submit">Дальше</button>
+  <div class="actions" style="margin-top:var(--space-5)">
+    <button class="primary" type="submit">
+      Продолжить
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    </button>
     <a class="button" href="{{ url_for('projects.index') }}">Отмена</a>
   </div>
 </form>
