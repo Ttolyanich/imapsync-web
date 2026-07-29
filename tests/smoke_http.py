@@ -235,6 +235,15 @@ status, html, _ = get("/settings/")
 check("экран настроек открывается", "Журнал действий" in html)
 check("журнал уже что-то записал", "создан проект" in html)
 
+check("над своей строкой действий нет", "свои настройки — выше" in html)
+
+# Запрет на действия над собой держится на сервере, а не только в шаблоне:
+# свой пароль меняется в отдельном блоке, с подтверждением текущего.
+status, html, _ = post("/settings/users/1/reset", {"csrf_token": csrf(html)})
+check("сброс своего пароля отклонён", "Свой пароль меняется" in html)
+status, html, _ = post("/settings/users/1/toggle", {"csrf_token": csrf(html)})
+check("отключение самого себя отклонено", "Нельзя отключить самого себя" in html)
+
 status, html, _ = post("/settings/users", {
     "csrf_token": csrf(html), "username": "operator1", "role": "operator", "password": "",
 })

@@ -1,30 +1,58 @@
 /* Минимализм без внешних зависимостей: системные шрифты, никакого CDN.
-   Панель ставят в закрытые контуры, где интернета нет вовсе. */
+   Панель ставят в закрытые контуры, где интернета нет вовсе.
+
+   Главное правило этого файла: у всех интерактивных элементов одна высота
+   и одна геометрия. Разнобой в высотах кнопок — то, из-за чего интерфейс
+   выглядит собранным на коленке, даже когда всё работает. */
 
 :root {
-  --bg: #f6f7f9;
+  --bg: #f4f6f8;
   --panel: #ffffff;
+  --panel-2: #fafbfc;
   --ink: #1c2128;
+  --ink-soft: #414a56;
   --muted: #6b7280;
-  --line: #e3e6ea;
+  --line: #e1e5ea;
+  --line-strong: #cfd6de;
   --accent: #1f6feb;
+  --accent-ink: #ffffff;
   --ok: #1a7f37;
   --warn: #9a6700;
   --err: #cf222e;
+
   --radius: 10px;
+  --radius-sm: 7px;
+  --control-h: 38px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
+  --shadow-lift: 0 2px 4px rgba(16, 24, 40, .06), 0 8px 20px rgba(16, 24, 40, .08);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1216;
-    --panel: #171b21;
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #1b2029;
     --ink: #e6edf3;
+    --ink-soft: #c3ccd6;
     --muted: #8b949e;
     --line: #262c34;
+    --line-strong: #364049;
     --accent: #4493f8;
+    --accent-ink: #08121f;
     --ok: #3fb950;
     --warn: #d29922;
     --err: #f85149;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-lift: 0 8px 24px rgba(0, 0, 0, .45);
   }
 }
 
@@ -34,137 +62,358 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 15px/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font: 15px/1.55 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-h1 { font-size: 22px; margin: 0 0 4px; }
-h2 { font-size: 17px; margin: 24px 0 10px; }
-h3 { font-size: 15px; margin: 18px 0 8px; }
+
+h1 { font-size: 22px; line-height: 1.25; margin: 0 0 var(--space-1); letter-spacing: -.01em; }
+h2 { font-size: 17px; margin: var(--space-5) 0 var(--space-3); }
+h3 { font-size: 15px; margin: 0 0 var(--space-2); }
+p { margin: 0 0 var(--space-3); }
+p:last-child { margin-bottom: 0; }
+
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
+code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px; }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
+}
 
 /* --- каркас --- */
 
-.layout { display: flex; min-height: 100vh; }
+.layout { display: flex; min-height: 100vh; align-items: stretch; }
 
 .sidebar {
-  width: 220px;
-  flex: 0 0 220px;
+  width: 224px;
+  flex: 0 0 224px;
   background: var(--panel);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  padding: 18px 14px;
+  padding: var(--space-5) var(--space-3);
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
 
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 22px; }
-.brand-mark { color: var(--accent); font-size: 18px; }
+.brand {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-weight: 600; letter-spacing: -.01em;
+  padding: 0 var(--space-2) var(--space-5);
+}
+.brand-mark {
+  color: var(--accent); font-size: 17px;
+  width: 26px; height: 26px; border-radius: var(--radius-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
 
 .sidebar nav { display: flex; flex-direction: column; gap: 2px; }
 .sidebar nav a {
-  padding: 8px 10px; border-radius: 8px; color: var(--ink);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  line-height: 22px;
 }
-.sidebar nav a:hover { background: var(--bg); text-decoration: none; }
-.sidebar nav a.active { background: var(--accent); color: #fff; }
+.sidebar nav a:hover { background: var(--bg); color: var(--ink); text-decoration: none; }
+.sidebar nav a.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent); font-weight: 500;
+}
 
-.sidebar-foot { margin-top: auto; font-size: 13px; }
-.sidebar-foot .who { display: flex; flex-direction: column; margin-bottom: 6px; }
-.version { margin-top: 10px; font-size: 12px; }
+.sidebar-foot {
+  margin-top: auto; padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.sidebar-foot .who {
+  display: flex; flex-direction: column;
+  padding: 0 var(--space-2); margin-bottom: var(--space-2);
+}
+.sidebar-foot .who > span { font-size: 12px; }
+.sidebar-foot form { padding: 0 var(--space-2); }
+.version { padding: var(--space-2) var(--space-2) 0; font-size: 12px; }
 
-.content { flex: 1; padding: 24px 28px; max-width: 1400px; }
+.content {
+  flex: 1; min-width: 0;
+  padding: var(--space-5) var(--space-6);
+  max-width: 1360px;
+}
 
-/* --- карточки и формы --- */
+/* --- карточки --- */
 
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 18px;
-  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-4);
+}
+.card > h3:first-child { margin-top: 0; }
+
+.page-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: var(--space-3); flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+.card .page-head { margin-bottom: var(--space-3); }
+
+/* --- поля --- */
+
+label {
+  display: block;
+  margin-bottom: var(--space-3);
+  font-size: 13px;
+  color: var(--muted);
+}
+label:last-child { margin-bottom: 0; }
+
+input[type=text], input[type=password], input[type=number], input[type=file],
+input:not([type]), select, textarea {
+  display: block; width: 100%;
+  margin-top: var(--space-1);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  font: inherit; color: var(--ink);
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  transition: border-color .15s, box-shadow .15s;
+}
+select { padding-right: var(--space-2); cursor: pointer; }
+textarea { min-height: 110px; padding: var(--space-2) var(--space-3); resize: vertical; line-height: 1.5; }
+input[type=file] { padding: var(--space-2); cursor: pointer; }
+
+input:hover, select:hover, textarea:hover { border-color: var(--muted); }
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: var(--ring);
+}
+input:disabled, select:disabled, textarea:disabled {
+  background: var(--bg); color: var(--muted); cursor: not-allowed;
 }
 
-label { display: block; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
-input[type=text], input[type=password], input[type=number], input:not([type]),
-select, textarea {
-  display: block; width: 100%; margin-top: 4px;
-  padding: 8px 10px; font: inherit; color: var(--ink);
-  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+/* Галочка не должна выглядеть как поле ввода на всю ширину. */
+label:has(> input[type=checkbox]) {
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  color: var(--ink-soft); line-height: 1.45;
 }
-textarea { min-height: 110px; resize: vertical; }
-input[type=checkbox] { margin-right: 6px; }
+input[type=checkbox], input[type=radio] {
+  width: 16px; height: 16px; min-height: 0; margin: 3px 0 0;
+  accent-color: var(--accent); flex: 0 0 auto; cursor: pointer;
+}
+
+/* Ряд полей: колонки одинаковой ширины, узкие поля — классом, а не инлайном.
+   Раньше min-width из .row перебивал max-width на элементе, и «Порт»
+   оставался такой же ширины, как «Название». */
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0 var(--space-4);
+  align-items: start;
+}
+.row .field-sm { grid-column: span 1; max-width: 150px; }
+
+/* --- кнопки --- */
 
 button, .button {
-  display: inline-block; padding: 8px 14px; font: inherit; cursor: pointer;
-  background: var(--panel); color: var(--ink);
-  border: 1px solid var(--line); border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-4);
+  font: inherit; line-height: 1;
+  color: var(--ink-soft);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer; white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s;
 }
-button:hover, .button:hover { border-color: var(--accent); text-decoration: none; }
-button.primary, .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.danger { color: var(--err); border-color: var(--err); }
-button.link { background: none; border: none; padding: 0; color: var(--accent); }
-.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
-.row > * { flex: 1; min-width: 180px; }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+button:hover, .button:hover {
+  background: var(--panel-2); border-color: var(--muted);
+  color: var(--ink); text-decoration: none;
+}
+button:active, .button:active { transform: translateY(1px); }
+
+button.primary, .button.primary {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+  font-weight: 500;
+}
+button.primary:hover, .button.primary:hover {
+  background: color-mix(in srgb, var(--accent) 86%, #000);
+  border-color: color-mix(in srgb, var(--accent) 86%, #000);
+  color: var(--accent-ink);
+}
+
+button.danger { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, var(--line-strong)); }
+button.danger:hover { background: color-mix(in srgb, var(--err) 10%, transparent); color: var(--err); }
+
+button.link {
+  min-height: 0; padding: 0; background: none; border: none;
+  color: var(--accent); font-size: inherit;
+}
+button.link:hover { background: none; text-decoration: underline; }
+
+button:disabled, .button:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Каждая кнопка обёрнута в <form> ради CSRF. Без display:contents такая
+   обёртка становится флекс-элементом, растягивается по высоте строки и
+   кнопки в одном ряду получаются разной высоты. */
+.actions {
+  display: flex; align-items: center; align-content: flex-start;
+  gap: var(--space-2); flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+.actions:first-child, .page-head .actions { margin-top: 0; }
+.actions > form { display: contents; }
 
 /* --- сообщения --- */
 
-.flashes { margin-bottom: 14px; }
-.flash { padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--line); }
-.flash-ok { border-color: var(--ok); color: var(--ok); }
-.flash-error { border-color: var(--err); color: var(--err); }
+.flashes { margin-bottom: var(--space-4); }
+.flash {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+  background: var(--panel);
+}
+.flash-ok { border-left-color: var(--ok); }
+.flash-error { border-left-color: var(--err); color: var(--err); }
 
 .notice {
-  border-left: 3px solid var(--accent); background: var(--bg);
-  padding: 10px 12px; border-radius: 6px; margin: 12px 0; font-size: 13px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: var(--panel-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  margin: var(--space-3) 0;
+  font-size: 13px;
+  line-height: 1.5;
 }
+.notice:last-child { margin-bottom: 0; }
+.notice ul { margin: var(--space-2) 0 0; padding-left: 18px; }
+.notice li { margin-bottom: var(--space-1); }
 .notice.warn { border-left-color: var(--warn); }
 .notice.err { border-left-color: var(--err); }
 
-/* --- плитки выбора сервиса --- */
+/* --- плитки сервисов --- */
 
-.tiles { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
-.tile {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; min-width: 190px;
-  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-  color: var(--ink); cursor: pointer;
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
 }
-.tile:hover { border-color: var(--accent); text-decoration: none; }
-.tile img { width: 32px; height: 32px; }
+.tile {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--ink); cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.tile:hover {
+  border-color: var(--accent); box-shadow: var(--shadow-lift);
+  transform: translateY(-1px); text-decoration: none;
+}
+.tile img { width: 32px; height: 32px; flex: 0 0 32px; }
+.tile > span { display: flex; flex-direction: column; min-width: 0; }
 .tile .tile-name { font-weight: 500; }
-.tile .tile-host { font-size: 12px; color: var(--muted); }
-.tile .unverified { font-size: 11px; color: var(--warn); }
+.tile .tile-host, .tile .unverified {
+  font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tile .tile-host { color: var(--muted); }
+.tile .unverified { color: var(--warn); }
 
 /* --- таблицы --- */
 
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: auto; margin: 0 calc(var(--space-5) * -1); padding: 0 var(--space-5); }
+.card.table-wrap { margin-left: 0; margin-right: 0; padding: var(--space-4) var(--space-5); }
+
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
-tr.bad td { background: color-mix(in srgb, var(--err) 7%, transparent); }
-tr.warn td { background: color-mix(in srgb, var(--warn) 9%, transparent); }
+th, td { text-align: left; padding: var(--space-3) var(--space-3); vertical-align: top; }
+th:first-child, td:first-child { padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
+
+thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--panel);
+  font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--muted);
+  padding-top: 0; padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--line); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover td { background: var(--panel-2); }
+
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+tr.bad td { background: color-mix(in srgb, var(--err) 6%, transparent); }
+tr.bad:hover td { background: color-mix(in srgb, var(--err) 9%, transparent); }
+tr.warn td { background: color-mix(in srgb, var(--warn) 8%, transparent); }
+tr.warn:hover td { background: color-mix(in srgb, var(--warn) 12%, transparent); }
+
+/* Строка под записью, куда приезжает результат проверки связи. Пока она
+   пустая, её не должно быть видно вовсе. */
+tr.test-result { border-bottom: none; }
+tr.test-result td { padding: 0; }
+tr.test-result td:has(div:empty) { padding: 0; }
+tr.test-result .notice { margin: 0 0 var(--space-3); }
+
+/* Колонка действий: компактные кнопки, чтобы строка не разъезжалась. */
+td .actions { margin-top: 0; gap: var(--space-1); }
+td button, td .button { min-height: 30px; padding: 0 var(--space-3); font-size: 13px; }
+td select { min-height: 30px; font-size: 13px; }
 
 .badge {
-  display: inline-block; padding: 1px 7px; border-radius: 20px;
-  font-size: 12px; border: 1px solid var(--line);
+  display: inline-flex; align-items: center;
+  padding: 2px var(--space-2); border-radius: 20px;
+  font-size: 12px; line-height: 18px; white-space: nowrap;
+  border: 1px solid var(--line-strong); color: var(--muted);
 }
-.badge.ok { color: var(--ok); border-color: var(--ok); }
-.badge.err { color: var(--err); border-color: var(--err); }
-.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+            background: color-mix(in srgb, var(--ok) 8%, transparent); }
+.badge.err { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent);
+             background: color-mix(in srgb, var(--err) 8%, transparent); }
+.badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+              background: color-mix(in srgb, var(--warn) 10%, transparent); }
 
 /* --- прогресс --- */
 
-.bar { height: 8px; background: var(--bg); border-radius: 20px; overflow: hidden; border: 1px solid var(--line); }
-.bar span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
-.bar-labels { display: flex; justify-content: space-between; font-size: 13px; margin: 6px 0 2px; }
+.bar {
+  height: 8px; background: var(--bg); border-radius: 20px;
+  overflow: hidden; border: 1px solid var(--line);
+}
+.bar > span {
+  display: block; height: 100%; min-width: 2px;
+  background: var(--accent);
+  border-radius: 20px;
+  transition: width .4s ease;
+}
+.bar.mini { height: 5px; }
+.bar-labels {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: var(--space-3); font-size: 13px; margin-bottom: var(--space-2);
+}
 
 /* --- лента событий --- */
 
 .feed { font-size: 13px; max-height: 480px; overflow-y: auto; }
-.feed-line { display: flex; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.feed-line {
+  display: flex; gap: var(--space-3);
+  padding: var(--space-2) 0; border-bottom: 1px solid var(--line);
+}
+.feed-line:last-child { border-bottom: none; }
 .feed-line .ts { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.feed-line .msg { min-width: 0; word-break: break-word; }
 .feed-line.error .msg { color: var(--err); }
 .feed-line.warning .msg { color: var(--warn); }
 
@@ -172,32 +421,83 @@ tr.warn td { background: color-mix(in srgb, var(--warn) 9%, transparent); }
 
 .log-view {
   max-height: 480px; overflow: auto; margin: 0;
-  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--bg); font-size: 12px; line-height: 1.45;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--panel-2); font-size: 12px; line-height: 1.5;
   font-family: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
   white-space: pre-wrap; word-break: break-word;
 }
 
-.bar.mini { height: 5px; }
-
 /* --- вкладки --- */
 
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 18px 0 16px; }
-.tabs a { padding: 8px 14px; color: var(--muted); border-bottom: 2px solid transparent; }
-.tabs a.active { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs {
+  display: flex; gap: var(--space-1); flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  margin: var(--space-5) 0 var(--space-4);
+}
+.tabs a {
+  padding: var(--space-2) var(--space-3);
+  color: var(--muted); border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tabs a:hover { color: var(--ink); text-decoration: none; }
+.tabs a.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
 
-/* --- вход --- */
+/* --- вход и ошибки --- */
 
-.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.login-card { width: 340px; }
+.login-page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: var(--space-5);
+}
+.login-card { width: 360px; box-shadow: var(--shadow-lift); padding: var(--space-5); }
+.login-card h1 { margin-bottom: var(--space-1); }
+.login-card > p:first-of-type { margin-bottom: var(--space-5); }
+.login-card button { width: 100%; margin-top: var(--space-2); }
 .error-card { text-align: center; max-width: 420px; }
+.error-card h1 { font-size: 40px; color: var(--muted); }
 
-/* --- сетка карточек проектов --- */
+/* --- карточки проектов --- */
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
-.project-card { display: flex; flex-direction: column; gap: 8px; }
-.project-card .route { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+.project-card { display: flex; flex-direction: column; gap: var(--space-3); }
+.project-card .page-head { margin-bottom: 0; }
+.project-card .route {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: 13px; color: var(--muted); flex-wrap: wrap;
+}
 .project-card .route img { width: 20px; height: 20px; }
-.page-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.stat-row { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; }
-.stat-row b { font-size: 16px; display: block; font-weight: 600; }
+
+.stat-row {
+  display: flex; gap: var(--space-5); flex-wrap: wrap;
+  font-size: 13px; color: var(--muted);
+}
+.stat-row > div { display: flex; flex-direction: column; }
+.stat-row b {
+  font-size: 19px; font-weight: 600; color: var(--ink);
+  line-height: 1.2; font-variant-numeric: tabular-nums;
+}
+
+/* --- узкие экраны --- */
+
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: auto; flex: none; height: auto; position: static;
+    border-right: none; border-bottom: 1px solid var(--line);
+    padding: var(--space-3) var(--space-4);
+  }
+  .brand { padding: 0 0 var(--space-3); }
+  .sidebar nav { flex-direction: row; flex-wrap: wrap; }
+  .sidebar-foot {
+    margin-top: var(--space-3);
+    display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
+  }
+  .sidebar-foot .who { flex-direction: row; gap: var(--space-2); margin: 0; padding: 0; }
+  .sidebar-foot form, .version { padding: 0; }
+  .content { padding: var(--space-4); }
+  .table-wrap { margin: 0 calc(var(--space-4) * -1); padding: 0 var(--space-4); }
+}

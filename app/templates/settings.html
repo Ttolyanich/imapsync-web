@@ -50,33 +50,42 @@
             {% if not u.is_active %}<span class="badge warn">отключён</span>{% endif %}
           </td>
           <td>
-            <form method="post" action="{{ url_for('settings.change_role', user_id=u.id) }}"
-                  style="display:flex;gap:6px;align-items:center">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <select name="role" style="width:auto">
-                {% for value, title in roles.items() %}
-                  <option value="{{ value }}" {{ 'selected' if u.role == value }}>{{ title }}</option>
-                {% endfor %}
-              </select>
-              <button type="submit">Сменить</button>
-            </form>
+            {% if u.is_me %}
+              {{ u.role_title }}
+            {% else %}
+              <div class="actions">
+                <form method="post" action="{{ url_for('settings.change_role', user_id=u.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="role">
+                    {% for value, title in roles.items() %}
+                      <option value="{{ value }}" {{ 'selected' if u.role == value }}>{{ title }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit">Сменить</button>
+                </form>
+              </div>
+            {% endif %}
           </td>
           <td class="small muted">{{ u.created_at | local_time('%d.%m.%Y') }}</td>
           <td class="small muted">{{ u.last_login_at | local_time }}</td>
           <td>
-            <div class="actions" style="margin:0">
-              <form method="post" action="{{ url_for('settings.reset_password', user_id=u.id) }}"
-                    onsubmit="return confirm('Сбросить пароль? Текущий перестанет работать.')">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit">Сбросить пароль</button>
-              </form>
-              {% if not u.is_me %}
+            {# Над собой в этой таблице действий нет: свой пароль меняется
+               в блоке «Мой пароль», а отключить себя нельзя вовсе. #}
+            {% if u.is_me %}
+              <span class="muted small">свои настройки — выше</span>
+            {% else %}
+              <div class="actions">
+                <form method="post" action="{{ url_for('settings.reset_password', user_id=u.id) }}"
+                      onsubmit="return confirm('Сбросить пароль? Текущий перестанет работать.')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit">Сбросить пароль</button>
+                </form>
                 <form method="post" action="{{ url_for('settings.toggle_user', user_id=u.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit">{{ 'Отключить' if u.is_active else 'Включить' }}</button>
                 </form>
-              {% endif %}
-            </div>
+              </div>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

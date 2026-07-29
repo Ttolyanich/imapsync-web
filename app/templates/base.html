@@ -4,10 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}imapsync-web{% endblock %}</title>
-  {# Ничего с CDN: контейнер ставят в том числе в закрытый контур без интернета. #}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {# Ничего с CDN: контейнер ставят в том числе в закрытый контур без интернета.
+     Версия в адресе — чтобы после обновления образа браузер не отдавал
+     пользователю старые стили из кэша. #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ version }}">
   <link rel="icon" href="{{ url_for('static', filename='img/generic.svg') }}">
-  <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}?v={{ version }}" defer></script>
 </head>
 <body>
 {% if current_user() %}

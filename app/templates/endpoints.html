@@ -54,7 +54,7 @@
         </td>
         <td>{{ e.max_parallel }}</td>
         <td>
-          <div class="actions" style="margin:0">
+          <div class="actions">
             <form method="post" action="{{ url_for('endpoints.test', endpoint_id=e.id) }}"
                   hx-post="{{ url_for('endpoints.test', endpoint_id=e.id) }}"
                   hx-target="#test-{{ e.id }}" hx-swap="innerHTML">
@@ -65,8 +65,12 @@
               <a class="button" href="{{ url_for('endpoints.edit', endpoint_id=e.id) }}">Изменить</a>
             {% endif %}
           </div>
-          <div id="test-{{ e.id }}"></div>
         </td>
+      </tr>
+      {# Результат проверки — отдельной строкой во всю ширину. Внутри ячейки
+         с кнопками он раздувал колонку, и строки таблицы разъезжались. #}
+      <tr class="test-result">
+        <td colspan="6"><div id="test-{{ e.id }}"></div></td>
       </tr>
       {% endfor %}
     </tbody>

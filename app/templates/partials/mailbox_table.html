@@ -17,7 +17,7 @@
       <thead>
         <tr>
           <th>Откуда</th><th>Куда</th><th>Источник</th><th>Приёмник</th>
-          <th>Перенос</th><th>Писем</th><th>Объём</th><th></th>
+          <th>Перенос</th><th class="num">Писем</th><th class="num">Объём</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -54,8 +54,8 @@
               <span class="muted small">не начинался</span>
             {% endif %}
           </td>
-          <td>{{ r.total_messages | human_count }}</td>
-          <td>
+          <td class="num">{{ r.total_messages | human_count }}</td>
+          <td class="num">
             {{ r.total_bytes | human_size }}
             {% if r.quota_warning %}
               <div class="small" style="color:var(--warn)">не влезет в квоту приёмника</div>

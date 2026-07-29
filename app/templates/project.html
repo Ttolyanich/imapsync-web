@@ -115,7 +115,8 @@
             <thead>
               <tr>
                 <th>Папка источника</th><th>Назначение</th><th>Что делаем</th>
-                <th>Папка приёмника</th><th>Ящиков</th><th>Писем</th><th>Объём</th>
+                <th>Папка приёмника</th><th class="num">Ящиков</th>
+                <th class="num">Писем</th><th class="num">Объём</th>
               </tr>
             </thead>
             <tbody>
@@ -139,9 +140,9 @@
                   <input name="dst__{{ row.src_name }}" value="{{ row.dst_name or '' }}"
                          {{ 'disabled' if not can_edit }}>
                 </td>
-                <td>{{ row.mailboxes }}</td>
-                <td>{{ row.messages | human_count }}</td>
-                <td>{{ row.size_bytes | human_size }}</td>
+                <td class="num">{{ row.mailboxes }}</td>
+                <td class="num">{{ row.messages | human_count }}</td>
+                <td class="num">{{ row.size_bytes | human_size }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -190,24 +191,25 @@
     <table>
       <thead>
         <tr>
-          <th>Ящик</th><th>Было на источнике</th><th>Стало на приёмнике</th>
-          <th>Разница</th><th>Объём источника</th><th>Объём приёмника</th><th>Сверено</th>
+          <th>Ящик</th><th class="num">Было на источнике</th><th class="num">Стало на приёмнике</th>
+          <th class="num">Разница</th><th class="num">Объём источника</th>
+          <th class="num">Объём приёмника</th><th>Сверено</th>
         </tr>
       </thead>
       <tbody>
         {% for r in rows %}
         <tr class="{{ 'warn' if r.gap is not none and r.gap < 0 }}">
           <td>{{ r.src_email }}</td>
-          <td>{{ r.total_messages | human_count }}</td>
-          <td>{{ r.dst_total_messages | human_count }}</td>
-          <td>
+          <td class="num">{{ r.total_messages | human_count }}</td>
+          <td class="num">{{ r.dst_total_messages | human_count }}</td>
+          <td class="num">
             {% if r.gap is none %}<span class="muted">—</span>
             {% elif r.gap == 0 %}<span class="badge ok">сходится</span>
             {% elif r.gap < 0 %}<span class="badge warn">{{ r.gap }}</span>
             {% else %}<span class="badge">+{{ r.gap }}</span>{% endif %}
           </td>
-          <td>{{ r.total_bytes | human_size }}</td>
-          <td>{{ r.dst_total_bytes | human_size }}</td>
+          <td class="num">{{ r.total_bytes | human_size }}</td>
+          <td class="num">{{ r.dst_total_bytes | human_size }}</td>
           <td class="small muted">{{ r.reconciled_at | local_time }}</td>
         </tr>
         {% else %}

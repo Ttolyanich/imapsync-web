@@ -163,6 +163,13 @@ def change_role(user_id: int):
 @bp.post("/users/<int:user_id>/reset")
 @admin_required
 def reset_password(user_id: int):
+    # Свой пароль меняют только в блоке «Мой пароль» — там он задаётся
+    # осознанно и с подтверждением текущего, а не выдаётся случайной строкой
+    # самому себе через управление чужими учётными записями.
+    if user_id == current_user().id:
+        flash("Свой пароль меняется в блоке «Мой пароль».", "error")
+        return redirect(url_for("settings.index"))
+
     password = secrets.token_urlsafe(12)
     with session_scope() as db:
         user = db.get(User, user_id)
