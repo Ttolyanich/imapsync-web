@@ -125,7 +125,7 @@ python tests/test_units.py
 записи. Внешняя сеть не нужна.
 
 ```bash
-python tests/smoke_http.py
+SMOKE_PASSWORD=пароль_админа python tests/smoke_http.py
 ```
 
 Сквозной сценарий по работающему на `:5010` экземпляру: вход, CSRF, создание

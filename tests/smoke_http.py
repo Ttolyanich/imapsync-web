@@ -9,7 +9,9 @@ import urllib.request
 
 BASE = os.environ.get("SMOKE_BASE", "http://127.0.0.1:5010")
 ADMIN = os.environ.get("SMOKE_ADMIN", "admin")
-PASSWORD = os.environ.get("SMOKE_PASSWORD", "grill-test-2026")
+# Пароля по умолчанию здесь нет намеренно: это публичный репозиторий, и
+# захардкоженный пароль в нём рано или поздно окажется чьим-то настоящим.
+PASSWORD = os.environ.get("SMOKE_PASSWORD", "")
 
 jar = http.cookiejar.CookieJar()
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
@@ -56,6 +58,15 @@ def check(label, condition, extra=""):
     print(f"[{mark}] {label} {extra}")
     if not condition:
         sys.exit(1)
+
+
+if not PASSWORD:
+    print(
+        "Задай пароль администратора для проверки:\n"
+        "    SMOKE_PASSWORD=... python tests/smoke_http.py\n"
+        "Запускать только по тестовой базе — сценарий создаёт и меняет данные."
+    )
+    sys.exit(2)
 
 
 # 1. защита: без входа редиректит на логин
