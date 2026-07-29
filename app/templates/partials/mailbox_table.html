@@ -76,29 +76,33 @@
               <div class="small" style="color:var(--warn);font-weight:500">не влезет в квоту</div>
             {% endif %}
           </td>
-          <td class="small">
-            {% if r.auth_locked %}
-              <div class="badge warn"><span class="badge-dot"></span>попытки заблокированы</div>
-              <div class="muted">попыток: {{ r.attempts }}</div>
-              {% if can_edit %}
-                <form method="post" style="margin-top:4px"
-                      action="{{ url_for('projects.unlock_mailbox', project_id=project_id, mailbox_id=r.id) }}">
+          <td class="small" style="white-space:nowrap">
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+              {% if r.auth_locked %}
+                <div class="badge warn"><span class="badge-dot"></span>заблокирован</div>
+                {% if can_edit %}
+                  <form method="post" action="{{ url_for('projects.unlock_mailbox', project_id=project_id, mailbox_id=r.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="button button-sm danger" type="submit">Снять блокировку</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+
+              {% if r.has_log %}
+                <a class="button button-sm" href="{{ url_for('projects.view', project_id=project_id, tab='log', mailbox=r.id) }}">
+                  Лог
+                </a>
+              {% endif %}
+
+              {% if can_edit and r.status in ('done', 'failed') %}
+                <form method="post" action="{{ url_for('projects.mailbox_resync', project_id=project_id, mailbox_id=r.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="link" type="submit">снять блокировку</button>
+                  <button class="button button-sm" type="submit">Досинхронить</button>
                 </form>
               {% endif %}
-            {% endif %}
-            {% if r.hint %}<div class="muted">{{ r.hint }}</div>{% endif %}
-            {% if r.has_log %}
-              <a href="{{ url_for('projects.view', project_id=project_id, tab='log', mailbox=r.id) }}">лог</a>
-            {% endif %}
-            {% if can_edit and r.status in ('done', 'failed') %}
-              <form method="post" style="margin-top:4px"
-                    action="{{ url_for('projects.mailbox_resync', project_id=project_id, mailbox_id=r.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="link" type="submit">досинхронить</button>
-              </form>
-            {% endif %}
+
+              {% if r.hint %}<div class="muted small">{{ r.hint }}</div>{% endif %}
+            </div>
           </td>
         </tr>
         {% else %}

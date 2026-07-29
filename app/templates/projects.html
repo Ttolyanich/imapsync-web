@@ -27,9 +27,9 @@
 {% else %}
 <div class="grid">
   {% for c in cards %}
-  <div class="card project-card">
+  <div class="card project-card" onclick="window.location='{{ url_for('projects.view', project_id=c.id) }}'" style="cursor:pointer">
     <div class="page-head">
-      <a href="{{ url_for('projects.view', project_id=c.id) }}" style="font-size:16px;color:var(--ink)">
+      <a href="{{ url_for('projects.view', project_id=c.id) }}" style="font-size:16px;color:var(--ink)" onclick="event.stopPropagation()">
         <b>{{ c.name }}</b>
       </a>
       <span class="badge {{ 'ok' if c.status == 'done' else ('warn' if c.status == 'running' else '') }}">

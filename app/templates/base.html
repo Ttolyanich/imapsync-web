@@ -43,6 +43,12 @@
         <span class="who-name">{{ current_user().username }}</span>
         <span class="who-role">{{ 'Администратор' if current_user().is_admin else 'Оператор' }}</span>
       </div>
+
+      <button class="button" type="button" onclick="document.getElementById('pwd-modal').showModal()" style="width:100%;font-size:12.5px;min-height:34px;margin-bottom:var(--space-2)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        Сменить пароль
+      </button>
+
       <form method="post" action="{{ url_for('auth.logout') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="button danger" type="submit" style="width:100%">
@@ -67,6 +73,33 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+
+{# Всплывающее окно смены пароля #}
+<dialog id="pwd-modal" class="modal-dialog">
+  <div class="modal-card">
+    <div class="page-head" style="margin-bottom:var(--space-3)">
+      <h3 style="margin:0">Сменить пароль</h3>
+      <button type="button" class="button link" onclick="document.getElementById('pwd-modal').close()" style="font-size:20px;line-height:1;color:var(--muted)">&times;</button>
+    </div>
+    <form method="post" action="{{ url_for('settings.change_password') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Текущий пароль
+        <input type="password" name="current_password" autocomplete="current-password" required>
+      </label>
+      <label style="margin-top:var(--space-3)">Новый пароль
+        <input type="password" name="new_password" autocomplete="new-password" required>
+      </label>
+      <label style="margin-top:var(--space-3)">Подтверждение пароля
+        <input type="password" name="repeat_password" autocomplete="new-password" required>
+      </label>
+      <div class="actions" style="margin-top:var(--space-4);justify-content:flex-end">
+        <button type="button" class="button" onclick="document.getElementById('pwd-modal').close()">Отмена</button>
+        <button class="primary" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
 {% else %}
   {% block anon %}{% endblock %}
 {% endif %}

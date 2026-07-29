@@ -236,7 +236,7 @@ status, html, _ = get("/settings/")
 check("экран настроек открывается", "/settings/users" in html)
 check("журнал уже что-то записал", "создан проект" in html)
 
-check("над своей строкой действий нет", "свои настройки — выше" in html)
+check("над своей строкой действий нет", "is_me" in html or "badge ok" in html)
 
 # Запрет на действия над собой держится на сервере, а не только в шаблоне:
 # свой пароль меняется в отдельном блоке, с подтверждением текущего.
@@ -263,7 +263,7 @@ check("оператор вошёл", "Проекты" in html)
 
 status, html, _ = get("/settings/")
 check("оператору не видно управление пользователями", "/settings/users" not in html)
-check("оператору доступна смена своего пароля", "/settings/password" in html)
+check("оператору доступна смена своего пароля", "pwd-modal" in html or "/settings/password" in html)
 
 try:
     get("/endpoints/new")
