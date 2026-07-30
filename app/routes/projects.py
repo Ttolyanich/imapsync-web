@@ -817,7 +817,7 @@ def _mailbox_rows(
                 # Перенос
                 "done_messages": done_messages,
                 "done_bytes": done_bytes,
-                "percent": _percent(done_messages, mailbox.total_messages),
+                "percent": 100 if mailbox.status == MB_DONE else _percent(done_messages, mailbox.total_messages),
                 "run_attempts": mailbox.run_attempts,
                 "current_folder": active.folder if active else mailbox.current_folder,
                 "speed": active.speed if active else 0,

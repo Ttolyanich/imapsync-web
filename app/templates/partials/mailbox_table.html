@@ -85,7 +85,11 @@
               </div>
               <div class="small muted" data-live="counts"
                    style="margin-top:2px;font-variant-numeric:tabular-nums">
-                {{ r.done_messages | human_count }} / {{ r.total_messages | human_count }} писем
+                {% if r.status == 'done' and r.done_messages != r.total_messages and r.total_messages %}
+                  {{ r.done_messages | human_count }} из {{ r.total_messages | human_count }} писем перенесено
+                {% else %}
+                  {{ r.done_messages | human_count }} / {{ r.total_messages | human_count }} писем
+                {% endif %}
                 · {{ r.done_bytes | human_size }} / {{ r.total_bytes | human_size }}
                 {%- if r.speed %} · {{ (r.speed / 1048576) | round(1) }} МБ/с{% endif -%}
               </div>
