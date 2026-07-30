@@ -33,6 +33,7 @@ from app.journal import log_action, log_event
 from app.models import (
     MB_CHECK_FAILED,
     MB_CHECK_OK,
+    MB_DONE,
     PROJECT_DONE,
     PROJECT_READY,
     Endpoint,
