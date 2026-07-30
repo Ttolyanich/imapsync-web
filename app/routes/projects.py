@@ -38,6 +38,7 @@ from app.models import (
     Endpoint,
     Event,
     Mailbox,
+    MailboxFolder,
     Project,
 )
 from app.presets import get_preset
@@ -261,6 +262,67 @@ def migrate_progress(project_id: int):
         progress=runner.progress if runner else None,
         project_id=project_id,
         can_edit=can_edit,
+    )
+
+
+@bp.get("/projects/<int:project_id>/mailboxes/<int:mailbox_id>/folders")
+@login_required
+def mailbox_folders(project_id: int, mailbox_id: int):
+    """Развёрнутая строка ящика: что происходит по папкам.
+
+    Пока прогон идёт, цифры берём из памяти супервизора. Когда он закончен —
+    из инвентаризации источника и, если делали сверку, из опроса приёмника.
+    """
+    with session_scope() as db:
+        _get(db, project_id)
+        mailbox = db.get(Mailbox, mailbox_id)
+        if mailbox is None or mailbox.project_id != project_id:
+            abort(404)
+
+        src_folders = (
+            db.query(MailboxFolder)
+            .filter(MailboxFolder.mailbox_id == mailbox_id, MailboxFolder.side == "src")
+            .order_by(MailboxFolder.name_display)
+            .all()
+        )
+        dst_counts = {
+            f.name_display: f.messages
+            for f in db.query(MailboxFolder)
+            .filter(MailboxFolder.mailbox_id == mailbox_id, MailboxFolder.side == "dst")
+            .all()
+        }
+        inventory = [
+            {
+                "name": f.name_display,
+                "raw": f.name_raw,
+                "messages": f.messages,
+                "size_bytes": f.size_bytes,
+                "special_use": f.special_use,
+                "selectable": f.selectable,
+                "on_destination": dst_counts.get(f.name_display),
+            }
+            for f in src_folders
+        ]
+        email = mailbox.src_email
+        reconciled = mailbox.reconciled_at
+
+    runner = get_migration(project_id)
+    active = runner.progress.active.get(mailbox_id) if runner else None
+    live = {f.raw: f for f in (active.folders if active else [])}
+    live_by_name = {f.name: f for f in (active.folders if active else [])}
+
+    for row in inventory:
+        progress = live.get(row["raw"]) or live_by_name.get(row["name"])
+        row["live"] = progress
+
+    return render_template(
+        "partials/mailbox_folders.html",
+        rows=inventory,
+        email=email,
+        reconciled=reconciled,
+        running=active is not None,
+        project_id=project_id,
+        mailbox_id=mailbox_id,
     )
 
 
@@ -625,7 +687,15 @@ def _mailbox_rows(
         .limit(per_page)
         .all()
     )
+    # Пока прогон идёт, свежие цифры живут в памяти супервизора, а не в базе:
+    # писать в неё на каждое письмо было бы расточительно.
+    runner = get_migration(project_id)
+    live = runner.progress.active if runner else {}
+
     for mailbox in mailboxes:
+        active = live.get(mailbox.id)
+        done_messages = active.done_messages if active else mailbox.done_messages
+        done_bytes = active.done_bytes if active else mailbox.done_bytes
         rows.append(
             {
                 "id": mailbox.id,
@@ -648,11 +718,13 @@ def _mailbox_rows(
                 "has_src_password": bool(mailbox.src_password_enc),
                 "has_dst_password": bool(mailbox.dst_password_enc),
                 # Перенос
-                "done_messages": mailbox.done_messages,
-                "done_bytes": mailbox.done_bytes,
-                "percent": _percent(mailbox.done_messages, mailbox.total_messages),
+                "done_messages": done_messages,
+                "done_bytes": done_bytes,
+                "percent": _percent(done_messages, mailbox.total_messages),
                 "run_attempts": mailbox.run_attempts,
-                "current_folder": mailbox.current_folder,
+                "current_folder": active.folder if active else mailbox.current_folder,
+                "speed": active.speed if active else 0,
+                "is_live": active is not None,
                 "last_error": mailbox.last_error,
                 "exit_message": describe_exit(mailbox.last_exit_code)
                 if mailbox.last_exit_code not in (None, 0) else "",

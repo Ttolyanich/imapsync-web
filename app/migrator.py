@@ -70,6 +70,8 @@ class MailboxProgress:
     total_bytes: int | None = None
     speed: float = 0.0
     last_line: str = ""
+    # Прогресс по папкам этого ящика — для развёрнутой строки в таблице.
+    folders: list = field(default_factory=list)
     # Формат вывода imapsync построчно не зафиксирован. Если ни одна строка не
     # опознана, интерфейс не показывает нули как факт — см. шаблон.
     output_recognised: bool = False
@@ -334,6 +336,7 @@ class MigrationRunner:
         # Иначе на дельта-прогоне полоска падала бы со 100% до нуля: показываем
         # «сколько из ящика уже лежит на приёмнике», а не «сколько за этот запуск».
         base_messages, base_bytes = self._baselines.get(tracker.mailbox_id, (0, 0))
+        folders = run.folders
         with self._lock:
             tracker.folder = run.current_folder
             tracker.last_line = run.last_line
@@ -341,6 +344,7 @@ class MigrationRunner:
             tracker.speed = run.speed_bytes_per_second
             tracker.done_messages = base_messages + run.result.copied_messages
             tracker.done_bytes = base_bytes + run.result.copied_bytes
+            tracker.folders = folders
 
     # -- работа с БД --------------------------------------------------------
 

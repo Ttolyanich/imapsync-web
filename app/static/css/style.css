@@ -156,6 +156,17 @@ html[data-theme="light"] {
    hidden — без этой строки скрытые поля продолжают показываться. */
 [hidden] { display: none !important; }
 
+/* Раскрывающаяся строка ящика с разбивкой по папкам. */
+.mailbox-toggle {
+  font-size: 12px;
+  line-height: 1;
+  width: 14px;
+  flex: 0 0 14px;
+  text-align: left;
+}
+tr.folder-details > td { padding-top: 0; }
+tr.folder-details table { font-size: 13px; }
+
 body {
   margin: 0;
   background-color: var(--bg);

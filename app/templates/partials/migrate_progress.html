@@ -1,62 +1,17 @@
 {% if progress %}
-{% set current = progress.current %}
+{# Один общий бар на проект. Прогресс по каждому ящику живёт в его строке
+   в таблице ниже: так видно сразу все ящики, а не один выбранный. #}
 <div class="card" style="border-left:4px solid var(--accent)">
-  {# Активный ящик #}
-  {% if current %}
-    <div class="bar-labels">
-      <span><b>{{ current.email }}</b>{% if current.folder %}
-        <span class="muted">→ {{ current.folder }}</span>{% endif %}</span>
-      <span class="muted">
-        {% if current.total_messages %}
-          <b>{{ (100 * current.done_messages / current.total_messages) | round | int }}%</b>
-        {% endif %}
-      </span>
-    </div>
-    <div class="bar">
-      <span style="width: {{ (100 * current.done_messages / current.total_messages) | round | int
-                             if current.total_messages else 0 }}%"></span>
-    </div>
-    <div class="small muted" style="margin-top:6px">
-      {{ current.done_messages | human_count }} / {{ current.total_messages | human_count }} писем
-      · {{ current.done_bytes | human_size }} / {{ current.total_bytes | human_size }}
-      {% if current.speed %} · <b>{{ (current.speed / 1048576) | round(1) }} МБ/с</b>{% endif %}
-    </div>
-
-    {% if not current.output_recognised and current.last_line %}
-      <div class="small muted" style="margin-top:6px">
-        <code>{{ current.last_line }}</code>
-      </div>
-    {% endif %}
-  {% endif %}
-
-  {# Если параллельно в работе несколько ящиков #}
-  {% if progress.active and progress.active | length > 1 %}
-    <div style="margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--line)">
-      <div class="small muted" style="margin-bottom:var(--space-2);font-weight:600">
-        Параллельно в работе ({{ progress.active | length }}):
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:var(--space-2)">
-        {% for p in progress.active.values() %}
-          <div style="background:var(--panel-subtle);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);font-size:12.5px">
-            <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.email }}</div>
-            <div class="muted" style="display:flex;justify-content:space-between;margin-top:2px">
-              <span>{{ p.folder or 'подключение...' }}</span>
-              {% if p.speed %}<span><b>{{ (p.speed / 1048576) | round(1) }} MB/s</b></span>{% endif %}
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
-
-  {# Бар всего проекта #}
-  <div class="bar-labels" style="margin-top:var(--space-4)">
+  <div class="bar-labels">
     <span>
       <b>
       {% if progress.stopping %}Останавливаю перенос…
       {% elif progress.running %}Перенос выполняется
       {% else %}Прогон завершён{% endif %}
       </b>
+      {% if progress.active %}
+        <span class="muted">· в работе {{ progress.active | length }} ящиков</span>
+      {% endif %}
     </span>
     <span style="color:var(--accent);font-weight:700">{{ progress.percent }}%</span>
   </div>
@@ -64,7 +19,6 @@
   <div class="small muted" style="margin-top:6px">
     {{ progress.finished_mailboxes }} / {{ progress.total_mailboxes }} ящиков
     · перенесено {{ progress.done_mailboxes }} · с ошибками {{ progress.failed_mailboxes }}
-    {% if progress.active %} · в работе {{ progress.active | length }}{% endif %}
     {% if progress.total_speed %} · <b>{{ (progress.total_speed / 1048576) | round(1) }} МБ/с всего</b>{% endif %}
   </div>
 

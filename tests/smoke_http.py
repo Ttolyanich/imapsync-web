@@ -181,6 +181,21 @@ check("фильтр «только упавшие» работает", "Упав
 status, html, _ = get(f"/projects/{project_id}/check/progress")
 check("партиал прогресса отдаётся", status == 200)
 
+# Прогресс по ящику живёт в его строке, а не отдельным баром сверху.
+status, html, _ = get(f"/projects/{project_id}/mailboxes")
+check("в строке ящика есть кнопка разворота", "data-mailbox-toggle" in html)
+# Ящики этого проекта ещё не переносили, поэтому в колонке «Перенос» honest
+# «не начинался», а счётчик писем появится с первым прогоном.
+check("статус переноса показан честно", "не начинался" in html)
+check("раскрытые строки переживают перерисовку", "__openMailboxes" in html)
+
+# id ящиков зависят от истории импортов — берём реальный из разметки.
+mailbox_ids = re.findall(r'data-mailbox-toggle="(\d+)"', html)
+check("id ящиков найдены в таблице", bool(mailbox_ids), f"({mailbox_ids})")
+status, html, _ = get(f"/projects/{project_id}/mailboxes/{mailbox_ids[0]}/folders")
+check("развёрнутая строка с папками отдаётся", "Папки ящика" in html)
+check("без инвентаризации папок честно сообщаем", "появится после проверки доступов" in html)
+
 # 11. перенос: предохранитель до проверки доступов
 status, html, _ = get(f"/projects/{project_id}")
 status, html, _ = post(f"/projects/{project_id}/migrate/start", {"csrf_token": csrf(html)})

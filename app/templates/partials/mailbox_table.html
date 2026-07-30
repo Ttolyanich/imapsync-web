@@ -39,8 +39,18 @@
         {% for r in rows %}
         <tr class="{{ 'bad' if r.status == 'check_failed' else ('warn' if r.quota_warning else '') }}">
           <td>
-            <b>{{ r.src_email }}</b>
-            {% if r.note %}<div class="muted small">{{ r.note }}</div>{% endif %}
+            <div style="display:flex;align-items:baseline;gap:var(--space-2)">
+              <button class="link mailbox-toggle" type="button"
+                      data-mailbox-toggle="{{ r.id }}"
+                      title="Показать папки"
+                      hx-get="{{ url_for('projects.mailbox_folders', project_id=project_id, mailbox_id=r.id) }}"
+                      hx-target="#folders-{{ r.id }}" hx-swap="innerHTML"
+                      hx-trigger="load-folders">▸</button>
+              <span>
+                <b>{{ r.src_email }}</b>
+                {% if r.note %}<div class="muted small">{{ r.note }}</div>{% endif %}
+              </span>
+            </div>
           </td>
           <td><b>{{ r.dst_email }}</b></td>
           <td>
@@ -53,7 +63,9 @@
             {% elif r.dst_result %}<span class="badge err"><span class="badge-dot"></span>{{ r.dst_message }}</span>
             {% else %}<span class="muted small">не проверялся</span>{% endif %}
           </td>
-          <td style="min-width:160px">
+          {# Прогресс по ящику живёт здесь, а не отдельным баром сверху:
+             так видно сразу все ящики, а не один выбранный. #}
+          <td style="min-width:220px">
             {% if r.status in ('running', 'done', 'failed', 'queued') %}
               <div class="bar mini"><span style="width: {{ r.percent }}%"></span></div>
               <div class="small muted" style="margin-top:4px">
@@ -63,7 +75,11 @@
                 {% elif r.status == 'done' %}<span style="color:var(--ok);font-weight:600">перенесён</span>
                 {% else %}<span style="color:var(--err);font-weight:600">{{ r.exit_message or 'ошибка' }}</span>
                 {% endif %}
-                · {{ r.done_messages | human_count }} писем
+              </div>
+              <div class="small muted" style="margin-top:2px;font-variant-numeric:tabular-nums">
+                {{ r.done_messages | human_count }} / {{ r.total_messages | human_count }} писем
+                · {{ r.done_bytes | human_size }} / {{ r.total_bytes | human_size }}
+                {% if r.speed %} · <b>{{ (r.speed / 1048576) | round(1) }} МБ/с</b>{% endif %}
               </div>
             {% else %}
               <span class="muted small">не начинался</span>
@@ -105,6 +121,10 @@
             </div>
           </td>
         </tr>
+        {# Развёрнутая строка с разбивкой по папкам — грузится по клику. #}
+        <tr class="folder-details" id="row-folders-{{ r.id }}" hidden>
+          <td colspan="8" id="folders-{{ r.id }}"></td>
+        </tr>
         {% else %}
         <tr><td colspan="8" class="muted" style="text-align:center;padding:var(--space-4)">
           {% if q %}
@@ -144,3 +164,39 @@
     </div>
   {% endif %}
 </div>
+
+<script>
+  // Таблица целиком перерисовывается каждые 5 секунд, поэтому раскрытые строки
+  // приходится помнить снаружи и восстанавливать после каждой перерисовки —
+  // иначе развёрнутый ящик схлопывался бы сам собой.
+  (function () {
+    window.__openMailboxes = window.__openMailboxes || new Set();
+    var open = window.__openMailboxes;
+
+    document.querySelectorAll('[data-mailbox-toggle]').forEach(function (button) {
+      var id = button.getAttribute('data-mailbox-toggle');
+      var row = document.getElementById('row-folders-' + id);
+      if (!row) return;
+
+      function show() {
+        row.hidden = false;
+        button.textContent = '▾';
+        button.title = 'Свернуть папки';
+        if (window.htmx) htmx.trigger(button, 'load-folders');
+      }
+
+      function hide() {
+        row.hidden = true;
+        button.textContent = '▸';
+        button.title = 'Показать папки';
+      }
+
+      if (open.has(id)) show();
+
+      button.addEventListener('click', function () {
+        if (open.has(id)) { open.delete(id); hide(); }
+        else { open.add(id); show(); }
+      });
+    });
+  })();
+</script>

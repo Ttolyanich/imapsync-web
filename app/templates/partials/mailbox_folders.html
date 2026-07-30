@@ -1,0 +1,69 @@
+{# Развёрнутая строка ящика: разбивка по папкам.
+   Пока прогон идёт — живые цифры из супервизора; после — инвентаризация
+   источника и, если делали сверку, число писем на приёмнике. #}
+<div style="padding:var(--space-3) 0 var(--space-2)">
+  <div class="small muted" style="margin-bottom:var(--space-2)">
+    Папки ящика <b>{{ email }}</b>
+    {% if running %}· идёт перенос{% elif reconciled %}· сверено {{ reconciled | local_time }}{% endif %}
+  </div>
+
+  {% if not rows %}
+    <div class="notice small" style="margin:0">
+      Список папок появится после проверки доступов — он берётся из инвентаризации ящика.
+    </div>
+  {% else %}
+    <table>
+      <thead>
+        <tr>
+          <th>Папка</th>
+          <th style="width:180px">Перенос</th>
+          <th class="num">Писем в источнике</th>
+          <th class="num">Перенесено</th>
+          <th class="num">На приёмнике</th>
+          <th class="num">Объём</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {% set live = r.live %}
+        <tr class="{{ 'warn' if not r.selectable }}">
+          <td>
+            {{ r.name }}
+            {% if r.special_use %}<span class="badge" style="margin-left:6px">{{ r.special_use }}</span>{% endif %}
+            {% if live and live.active %}
+              <span class="badge ok" style="margin-left:6px"><span class="badge-dot"></span>сейчас</span>
+            {% endif %}
+            {% if not r.selectable %}
+              <div class="muted small">служебная, не переносится</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if live %}
+              <div class="bar mini"><span style="width: {{ live.percent }}%"></span></div>
+              <div class="small muted" style="margin-top:4px">{{ live.percent }}%</div>
+            {% else %}
+              <span class="muted small">—</span>
+            {% endif %}
+          </td>
+          <td class="num">{{ r.messages | human_count }}</td>
+          <td class="num">
+            {% if live %}{{ live.copied | human_count }}{% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td class="num">
+            {% if r.on_destination is not none %}{{ r.on_destination | human_count }}
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td class="num">{{ r.size_bytes | human_size }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if not reconciled %}
+      <div class="small muted" style="margin-top:var(--space-2)">
+        Колонка «На приёмнике» заполнится после сверки — она опрашивает сам
+        сервер-приёмник и показывает, сколько писем там действительно лежит.
+      </div>
+    {% endif %}
+  {% endif %}
+</div>

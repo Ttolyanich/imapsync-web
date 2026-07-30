@@ -133,21 +133,57 @@ SUMMARY_PATTERNS = {
 }
 FOLDERS_SYNCED_PATTERN = re.compile(r"^Folders synced\s*:\s*(\d+)\s*/\s*(\d+)")
 
+# Сколько писем в папке источника — imapsync сообщает это перед обработкой
+# каждой папки. Знаменатель для построчного прогресса по папкам:
+#   Host1: folder [&BB4E...-] has 1 messages in total (mentioned by SELECT)
+FOLDER_TOTAL_PATTERN = re.compile(
+    r"^Host1:\s*folder\s+\[(?P<folder>[^\]]*)\]\s+has\s+(?P<count>\d+)\s+messages in total"
+)
+
 
 @dataclass
 class LineEvent:
     kind: str                 # folder | copied | skipped | error | plain
     folder: str | None = None
     size: int | None = None
+    # Протокольное имя папки — по нему сходятся строки разных типов.
+    raw: str | None = None
+
+
+@dataclass
+class FolderProgress:
+    """Прогресс по одной папке ящика."""
+
+    raw: str
+    name: str
+    total: int | None = None
+    copied: int = 0
+    copied_bytes: int = 0
+    active: bool = False
+
+    @property
+    def percent(self) -> int:
+        if not self.total:
+            return 100 if self.copied else 0
+        return min(100, int(round(100 * self.copied / self.total)))
 
 
 def parse_line(line: str) -> LineEvent:
+    match = FOLDER_TOTAL_PATTERN.search(line)
+    if match:
+        return LineEvent(
+            "folder_total",
+            raw=match.group("folder").strip(),
+            size=int(match.group("count")),
+        )
+
     for pattern in FOLDER_PATTERNS:
         match = pattern.search(line)
         if match:
             groups = match.groupdict()
-            name = groups.get("src") or groups.get("raw") or ""
-            return LineEvent("folder", folder=name.strip())
+            raw = (groups.get("raw") or "").strip()
+            name = (groups.get("src") or "").strip()
+            return LineEvent("folder", folder=name or raw, raw=raw or name)
 
     if COPIED_PATTERN.search(line):
         size_match = SIZE_PATTERN.search(line)
@@ -273,6 +309,9 @@ class ImapsyncRun:
         self._current_folder: str | None = None
         self._recognised_lines = 0
         self._last_line = ""
+        # Прогресс по папкам в порядке их обработки imapsync.
+        self._folders: dict[str, FolderProgress] = {}
+        self._current_raw: str | None = None
         # Скорость считаем по скользящему окну: средняя за весь прогон врёт
         # тем сильнее, чем дольше он идёт.
         self._window: list[tuple[float, int]] = []
@@ -288,6 +327,20 @@ class ImapsyncRun:
     def last_line(self) -> str:
         with self._lock:
             return self._last_line
+
+    @property
+    def folders(self) -> list[FolderProgress]:
+        """Снимок прогресса по папкам — копией, чтобы не отдавать наружу
+        изменяемое состояние из-под замка."""
+        with self._lock:
+            return [
+                FolderProgress(
+                    raw=f.raw, name=f.name, total=f.total,
+                    copied=f.copied, copied_bytes=f.copied_bytes,
+                    active=(f.raw == self._current_raw),
+                )
+                for f in self._folders.values()
+            ]
 
     @property
     def output_recognised(self) -> bool:
@@ -446,6 +499,24 @@ class ImapsyncRun:
         if event.kind == "folder":
             with self._lock:
                 self._current_folder = event.folder
+                self._current_raw = event.raw or event.folder
+                folder = self._folders.get(self._current_raw)
+                if folder is None:
+                    self._folders[self._current_raw] = FolderProgress(
+                        raw=self._current_raw, name=event.folder or self._current_raw
+                    )
+                elif event.folder:
+                    folder.name = event.folder
+                self._recognised_lines += 1
+                self.result.recognised_lines = self._recognised_lines
+        elif event.kind == "folder_total":
+            with self._lock:
+                raw = event.raw or ""
+                folder = self._folders.get(raw)
+                if folder is None:
+                    folder = FolderProgress(raw=raw, name=raw)
+                    self._folders[raw] = folder
+                folder.total = event.size
                 self._recognised_lines += 1
                 self.result.recognised_lines = self._recognised_lines
         elif event.kind == "copied":
@@ -456,6 +527,11 @@ class ImapsyncRun:
                 self._recognised_lines += 1
                 self.result.recognised_lines = self._recognised_lines
                 self._window.append((time.monotonic(), size))
+                # Письмо относим к папке, которую imapsync обрабатывает сейчас.
+                folder = self._folders.get(self._current_raw or "")
+                if folder is not None:
+                    folder.copied += 1
+                    folder.copied_bytes += size
         elif event.kind == "error":
             self.result.error_lines += 1
 
