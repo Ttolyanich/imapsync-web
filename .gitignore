@@ -9,6 +9,8 @@ data/
 *.db-shm
 *.log
 *.log.gz
+# Обезличенные боевые логи для тестов — они часть репозитория.
+!tests/fixtures/*.log
 .idea/
 .vscode/
 .DS_Store
