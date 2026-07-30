@@ -156,14 +156,19 @@ html[data-theme="light"] {
    hidden — без этой строки скрытые поля продолжают показываться. */
 [hidden] { display: none !important; }
 
-/* Раскрывающаяся строка ящика с разбивкой по папкам. */
+/* Раскрывающаяся строка ящика с разбивкой по папкам.
+   Нажимается вся строка, стрелка — только индикатор. */
+tr.mailbox-row { cursor: pointer; }
 .mailbox-toggle {
   font-size: 12px;
   line-height: 1;
   width: 14px;
   flex: 0 0 14px;
   text-align: left;
+  color: var(--muted);
+  user-select: none;
 }
+tr.mailbox-row:hover .mailbox-toggle { color: var(--accent); }
 tr.folder-details > td { padding-top: 0; }
 tr.folder-details table { font-size: 13px; }
 

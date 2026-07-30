@@ -37,15 +37,16 @@
       </thead>
       <tbody>
         {% for r in rows %}
-        <tr class="{{ 'bad' if r.status == 'check_failed' else ('warn' if r.quota_warning else '') }}">
+        {# Разворачивается вся строка целиком: целиться в стрелку неудобно.
+           Клики по кнопкам и ссылкам внутри строки обрабатываются как обычно. #}
+        <tr class="mailbox-row {{ 'bad' if r.status == 'check_failed' else ('warn' if r.quota_warning else '') }}"
+            data-mailbox-row="{{ r.id }}" title="Нажмите, чтобы показать папки">
           <td>
             <div style="display:flex;align-items:baseline;gap:var(--space-2)">
-              <button class="link mailbox-toggle" type="button"
-                      data-mailbox-toggle="{{ r.id }}"
-                      title="Показать папки"
-                      hx-get="{{ url_for('projects.mailbox_folders', project_id=project_id, mailbox_id=r.id) }}"
-                      hx-target="#folders-{{ r.id }}" hx-swap="innerHTML"
-                      hx-trigger="load-folders">▸</button>
+              <span class="mailbox-toggle" data-mailbox-toggle="{{ r.id }}"
+                    hx-get="{{ url_for('projects.mailbox_folders', project_id=project_id, mailbox_id=r.id) }}"
+                    hx-target="#folders-{{ r.id }}" hx-swap="innerHTML"
+                    hx-trigger="load-folders">▸</span>
               <span>
                 <b>{{ r.src_email }}</b>
                 {% if r.note %}<div class="muted small">{{ r.note }}</div>{% endif %}
@@ -173,27 +174,30 @@
     window.__openMailboxes = window.__openMailboxes || new Set();
     var open = window.__openMailboxes;
 
-    document.querySelectorAll('[data-mailbox-toggle]').forEach(function (button) {
-      var id = button.getAttribute('data-mailbox-toggle');
-      var row = document.getElementById('row-folders-' + id);
-      if (!row) return;
+    document.querySelectorAll('[data-mailbox-row]').forEach(function (tr) {
+      var id = tr.getAttribute('data-mailbox-row');
+      var marker = tr.querySelector('[data-mailbox-toggle]');
+      var details = document.getElementById('row-folders-' + id);
+      if (!marker || !details) return;
 
       function show() {
-        row.hidden = false;
-        button.textContent = '▾';
-        button.title = 'Свернуть папки';
-        if (window.htmx) htmx.trigger(button, 'load-folders');
+        details.hidden = false;
+        marker.textContent = '▾';
+        tr.title = 'Нажмите, чтобы свернуть папки';
+        if (window.htmx) htmx.trigger(marker, 'load-folders');
       }
 
       function hide() {
-        row.hidden = true;
-        button.textContent = '▸';
-        button.title = 'Показать папки';
+        details.hidden = true;
+        marker.textContent = '▸';
+        tr.title = 'Нажмите, чтобы показать папки';
       }
 
       if (open.has(id)) show();
 
-      button.addEventListener('click', function () {
+      tr.addEventListener('click', function (event) {
+        // Внутри строки есть кнопки, ссылки и формы — они живут своей жизнью.
+        if (event.target.closest('button, a, input, select, textarea, label, form')) return;
         if (open.has(id)) { open.delete(id); hide(); }
         else { open.add(id); show(); }
       });
