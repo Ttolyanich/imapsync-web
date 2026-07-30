@@ -33,7 +33,9 @@
             {% if live and live.active %}
               <span class="badge ok" style="margin-left:6px"><span class="badge-dot"></span>сейчас</span>
             {% endif %}
-            {% if not r.selectable %}
+            {% if r.excluded_reason %}
+              <div class="muted small" style="color:var(--warn);font-weight:500">{{ r.excluded_reason }}</div>
+            {% elif not r.selectable %}
               <div class="muted small">служебная, не переносится</div>
             {% endif %}
           </td>

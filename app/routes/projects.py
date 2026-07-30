@@ -389,18 +389,30 @@ def mailbox_folders(project_id: int, mailbox_id: int):
             .filter(MailboxFolder.mailbox_id == mailbox_id, MailboxFolder.side == "dst")
             .all()
         }
-        inventory = [
-            {
+        project = db.get(Project, project_id)
+        migrate_spam = project.migrate_spam
+        migrate_trash = project.migrate_trash
+
+        inventory = []
+        for f in src_folders:
+            reason = None
+            is_spam = f.special_use == "\\Junk" or f.name_display.lower() in ("спам", "junk", "spam")
+            is_trash = f.special_use == "\\Trash" or f.name_display.lower() in ("корзина", "trash", "deleted items")
+            if is_spam and not migrate_spam:
+                reason = "пропускается (спам отключён в настройках проекта)"
+            elif is_trash and not migrate_trash:
+                reason = "пропускается (корзина отключена в настройках проекта)"
+
+            inventory.append({
                 "name": f.name_display,
                 "raw": f.name_raw,
                 "messages": f.messages,
                 "size_bytes": f.size_bytes,
                 "special_use": f.special_use,
                 "selectable": f.selectable,
+                "excluded_reason": reason,
                 "on_destination": dst_counts.get(f.name_display),
-            }
-            for f in src_folders
-        ]
+            })
         email = mailbox.src_email
         reconciled = mailbox.reconciled_at
 
