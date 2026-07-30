@@ -13,13 +13,14 @@
         <span class="muted">· в работе {{ progress.active | length }} ящиков</span>
       {% endif %}
     </span>
-    <span style="color:var(--accent);font-weight:700">{{ progress.percent }}%</span>
+    <span data-live="migration-percent"
+          style="color:var(--accent);font-weight:700">{{ progress.percent }}%</span>
   </div>
-  <div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
-  <div class="small muted" style="margin-top:6px">
+  <div class="bar"><span data-live="migration-bar" style="width: {{ progress.percent }}%"></span></div>
+  <div class="small muted" style="margin-top:6px" data-live="migration-detail">
     {{ progress.finished_mailboxes }} / {{ progress.total_mailboxes }} ящиков
     · перенесено {{ progress.done_mailboxes }} · с ошибками {{ progress.failed_mailboxes }}
-    {% if progress.total_speed %} · <b>{{ (progress.total_speed / 1048576) | round(1) }} МБ/с всего</b>{% endif %}
+    {%- if progress.total_speed %} · {{ (progress.total_speed / 1048576) | round(1) }} МБ/с всего{% endif -%}
   </div>
 
   {% if progress.resumed %}

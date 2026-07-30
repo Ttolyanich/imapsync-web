@@ -169,6 +169,13 @@ tr.mailbox-row { cursor: pointer; }
   user-select: none;
 }
 tr.mailbox-row:hover .mailbox-toggle { color: var(--accent); }
+
+/* Цвет статуса задаётся классом, чтобы его можно было менять на месте
+   при фоновом обновлении, не перерисовывая строку. */
+.status-running { color: var(--accent); font-weight: 600; }
+.status-done { color: var(--ok); font-weight: 600; }
+.status-failed { color: var(--err); font-weight: 600; }
+.status-queued { color: var(--muted); }
 tr.folder-details > td { padding-top: 0; }
 tr.folder-details table { font-size: 13px; }
 

@@ -3,6 +3,8 @@
 
 {% block content %}
 {% set project_id = project.id %}
+<span id="live-source" hidden
+      data-live-url="{{ url_for('projects.live_state', project_id=project.id) }}"></span>
 <div class="page-head">
   <div>
     <h1>{{ project.name }}</h1>
@@ -49,14 +51,16 @@
   <div><b>{{ counts.size | human_size }}</b><span class="muted">объём</span></div>
 </div>
 
-{# Опрос раз в 2 секунды HTMX #}
+{# Разметку тянем один раз и потом ещё только тогда, когда меняется состояние
+   (пошёл прогон, закончился). Цифры между этим обновляются точечно — см.
+   скрипт в конце страницы. #}
 <div id="migrate-progress"
      hx-get="{{ url_for('projects.migrate_progress', project_id=project.id) }}"
-     hx-trigger="load, every 2s" hx-swap="innerHTML"></div>
+     hx-trigger="load, refresh-structure" hx-swap="innerHTML"></div>
 
 <div id="check-progress"
      hx-get="{{ url_for('projects.check_progress', project_id=project.id) }}"
-     hx-trigger="load, every 2s" hx-swap="innerHTML"></div>
+     hx-trigger="load, refresh-structure" hx-swap="innerHTML"></div>
 
 {% if quota_warnings %}
   <div class="notice warn">
@@ -82,9 +86,11 @@
 </div>
 
 {% if tab == 'mailboxes' %}
+  {# Таблицу целиком перерисовываем только когда меняется состав строк:
+     иначе на каждом обновлении сбивался бы скролл, выделение и фокус в поиске. #}
   <div id="mailboxes"
        hx-get="{{ url_for('projects.mailboxes_partial', project_id=project.id) }}"
-       hx-trigger="every 5s" hx-swap="innerHTML">
+       hx-trigger="refresh-structure" hx-swap="innerHTML">
     {% include "partials/mailbox_table.html" %}
   </div>
 
@@ -398,4 +404,99 @@
   </div>
   {% endif %}
 {% endif %}
+
+<script>
+  // Фоновое обновление без перерисовки.
+  //
+  // Раньше страница раз в несколько секунд подменяла целые куски разметки:
+  // сбивался скролл, пропадало выделение текста, слетал фокус в поле поиска,
+  // а развёрнутые строки моргали. Теперь по таймеру приходят только цифры,
+  // и мы меняем их на месте. Полная перерисовка остаётся, но случается лишь
+  // тогда, когда меняется само устройство страницы: появился или пропал
+  // прогон, изменился состав строк, ящик сменил состояние.
+  (function () {
+    var source = document.getElementById('live-source');
+    if (!source) return;
+
+    var url = source.getAttribute('data-live-url');
+    var structure = null;
+    var timer = null;
+
+    function setText(node, value) {
+      if (node && value !== undefined && node.textContent.trim() !== String(value).trim()) {
+        node.textContent = value;
+      }
+    }
+
+    function setWidth(node, percent) {
+      if (node && percent !== undefined) node.style.width = percent + '%';
+    }
+
+    function applyMailbox(item) {
+      var row = document.querySelector('[data-mailbox-row="' + item.id + '"]');
+      if (!row) return;
+      setWidth(row.querySelector('[data-live="bar"]'), item.percent);
+      setText(row.querySelector('[data-live="counts"]'), item.counts);
+
+      var status = row.querySelector('[data-live="status"]');
+      if (status) {
+        setText(status, item.status);
+        status.className = 'status-' + item.kind;
+      }
+    }
+
+    function applyProgress(prefix, data) {
+      if (!data) return;
+      setText(document.querySelector('[data-live="' + prefix + '-percent"]'), data.percent + '%');
+      setWidth(document.querySelector('[data-live="' + prefix + '-bar"]'), data.percent);
+      setText(document.querySelector('[data-live="' + prefix + '-detail"]'), data.detail);
+    }
+
+    function refreshStructure() {
+      ['migrate-progress', 'check-progress', 'mailboxes'].forEach(function (id) {
+        var node = document.getElementById(id);
+        if (node && window.htmx) htmx.trigger(node, 'refresh-structure');
+      });
+    }
+
+    function tick() {
+      fetch(url, {headers: {'X-Requested-With': 'fetch'}})
+        .then(function (response) { return response.ok ? response.json() : null; })
+        .then(function (data) {
+          if (!data) return;
+
+          if (structure !== null && data.structure !== structure) {
+            // Состав строк или состояние прогона изменились — только здесь
+            // имеет смысл перерисовывать разметку целиком.
+            refreshStructure();
+          }
+          structure = data.structure;
+
+          data.mailboxes.forEach(applyMailbox);
+          applyProgress('migration', data.migration);
+          applyProgress('check', data.check);
+        })
+        .catch(function () { /* сеть моргнула — попробуем на следующем тике */ });
+    }
+
+    function start() {
+      if (timer) return;
+      tick();
+      timer = setInterval(tick, 2000);
+    }
+
+    function stop() {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = null;
+    }
+
+    // Во вкладке, которую не смотрят, опрашивать сервер незачем.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) stop(); else start();
+    });
+
+    start();
+  })();
+</script>
 {% endblock %}

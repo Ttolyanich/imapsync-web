@@ -66,24 +66,31 @@
           </td>
           {# Прогресс по ящику живёт здесь, а не отдельным баром сверху:
              так видно сразу все ящики, а не один выбранный. #}
+          {# Значения помечены data-live-*: их обновляют на месте, не перерисовывая
+             таблицу — иначе на каждом обновлении сбивался бы скролл и выделение. #}
           <td style="min-width:220px">
             {% if r.status in ('running', 'done', 'failed', 'queued') %}
-              <div class="bar mini"><span style="width: {{ r.percent }}%"></span></div>
-              <div class="small muted" style="margin-top:4px">
-                {% if r.status == 'running' %}
-                  <span style="color:var(--accent);font-weight:600">идёт</span>{% if r.current_folder %} · {{ r.current_folder }}{% endif %}
-                {% elif r.status == 'queued' %}в очереди
-                {% elif r.status == 'done' %}<span style="color:var(--ok);font-weight:600">перенесён</span>
-                {% else %}<span style="color:var(--err);font-weight:600">{{ r.exit_message or 'ошибка' }}</span>
-                {% endif %}
+              <div class="bar mini">
+                <span data-live="bar" style="width: {{ r.percent }}%"></span>
               </div>
-              <div class="small muted" style="margin-top:2px;font-variant-numeric:tabular-nums">
+              <div class="small muted" style="margin-top:4px">
+                <span data-live="status" class="status-{{ r.status }}">
+                  {%- if r.status == 'running' -%}
+                    идёт{% if r.current_folder %} · {{ r.current_folder }}{% endif %}
+                  {%- elif r.status == 'queued' -%}в очереди
+                  {%- elif r.status == 'done' -%}перенесён
+                  {%- else -%}{{ r.exit_message or 'ошибка' }}
+                  {%- endif -%}
+                </span>
+              </div>
+              <div class="small muted" data-live="counts"
+                   style="margin-top:2px;font-variant-numeric:tabular-nums">
                 {{ r.done_messages | human_count }} / {{ r.total_messages | human_count }} писем
                 · {{ r.done_bytes | human_size }} / {{ r.total_bytes | human_size }}
-                {% if r.speed %} · <b>{{ (r.speed / 1048576) | round(1) }} МБ/с</b>{% endif %}
+                {%- if r.speed %} · {{ (r.speed / 1048576) | round(1) }} МБ/с{% endif -%}
               </div>
             {% else %}
-              <span class="muted small">не начинался</span>
+              <span class="muted small" data-live="status">не начинался</span>
             {% endif %}
           </td>
           <td class="num">{{ r.total_messages | human_count }}</td>

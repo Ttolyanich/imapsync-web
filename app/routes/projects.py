@@ -265,6 +265,103 @@ def migrate_progress(project_id: int):
     )
 
 
+@bp.get("/projects/<int:project_id>/live")
+@login_required
+def live_state(project_id: int):
+    """Только цифры, без разметки.
+
+    Раньше страница раз в несколько секунд перерисовывала таблицу целиком:
+    сбивался скролл, слетало выделение текста и фокус в поле поиска, а
+    развёрнутые строки моргали. Теперь меняются значения на месте, а полная
+    перерисовка нужна лишь когда меняется сам состав строк — за этим следит
+    поле «structure».
+
+    Строки для показа собирает сервер: иначе форматирование чисел пришлось бы
+    повторить на javascript и оно бы разъехалось с серверным.
+    """
+    from app import human_count, human_size
+
+    with session_scope() as db:
+        _get(db, project_id)
+        rows, _, _, _ = _mailbox_rows(db, project_id, per_page=1000)
+
+    def counts_text(row: dict) -> str:
+        if row["status"] not in ("running", "done", "failed", "queued"):
+            return ""
+        parts = [
+            f"{human_count(row['done_messages'])} / {human_count(row['total_messages'])} писем",
+            f"{human_size(row['done_bytes'])} / {human_size(row['total_bytes'])}",
+        ]
+        if row.get("speed"):
+            parts.append(f"{row['speed'] / 1048576:.1f} МБ/с")
+        return " · ".join(parts)
+
+    def status_text(row: dict) -> str:
+        if row["status"] == "running":
+            folder = row.get("current_folder")
+            return f"идёт · {folder}" if folder else "идёт"
+        if row["status"] == "queued":
+            return "в очереди"
+        if row["status"] == "done":
+            return "перенесён"
+        if row["status"] == "failed":
+            return row.get("exit_message") or "ошибка"
+        return "не начинался"
+
+    mailboxes = [
+        {
+            "id": row["id"],
+            "percent": row["percent"],
+            "counts": counts_text(row),
+            "status": status_text(row),
+            "kind": row["status"],
+        }
+        for row in rows
+    ]
+
+    migration = get_migration(project_id)
+    check = get_check(project_id)
+
+    payload = {
+        "mailboxes": mailboxes,
+        "migration": _live_migration(migration),
+        "check": _live_check(check),
+    }
+    # Состав строк и их состояние: пока не меняется — перерисовывать нечего.
+    payload["structure"] = "|".join(
+        f"{m['id']}:{m['kind']}" for m in mailboxes
+    ) + f"|m={bool(migration and migration.progress.running)}" \
+        f"|c={bool(check and check.progress.running)}"
+
+    return jsonify(payload)
+
+
+def _live_migration(runner) -> dict | None:
+    if runner is None:
+        return None
+    p = runner.progress
+    detail = (
+        f"{p.finished_mailboxes} / {p.total_mailboxes} ящиков"
+        f" · перенесено {p.done_mailboxes} · с ошибками {p.failed_mailboxes}"
+    )
+    if p.total_speed:
+        detail += f" · {p.total_speed / 1048576:.1f} МБ/с всего"
+    return {"running": p.running, "percent": p.percent, "detail": detail}
+
+
+def _live_check(runner) -> dict | None:
+    if runner is None:
+        return None
+    p = runner.progress
+    detail = (
+        f"проверено {p.checked} из {p.total}"
+        f" · доступны {p.ok} · с ошибкой {p.failed}"
+    )
+    if p.skipped:
+        detail += f" · пропущено с прошлой ошибкой {p.skipped}"
+    return {"running": p.running, "percent": p.percent, "detail": detail}
+
+
 @bp.get("/projects/<int:project_id>/mailboxes/<int:mailbox_id>/folders")
 @login_required
 def mailbox_folders(project_id: int, mailbox_id: int):

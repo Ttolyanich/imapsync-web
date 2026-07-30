@@ -5,13 +5,14 @@
       <b>{% if progress.running %}Проверка доступов выполняется{% else %}Проверка доступов завершена{% endif %}</b>
       {% if progress.current %}<span class="muted">· {{ progress.current }}</span>{% endif %}
     </span>
-    <span style="color:var(--accent);font-weight:700">{{ progress.percent }}%</span>
+    <span data-live="check-percent"
+          style="color:var(--accent);font-weight:700">{{ progress.percent }}%</span>
   </div>
-  <div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
-  <div class="small muted" style="margin-top:6px">
-    проверено {{ progress.checked }} из {{ progress.total }} ·
-    доступны {{ progress.ok }} · с ошибкой {{ progress.failed }}
-    {% if progress.skipped %} · пропущено с прошлой ошибкой {{ progress.skipped }}{% endif %}
+  <div class="bar"><span data-live="check-bar" style="width: {{ progress.percent }}%"></span></div>
+  <div class="small muted" style="margin-top:6px" data-live="check-detail">
+    проверено {{ progress.checked }} из {{ progress.total }}
+    · доступны {{ progress.ok }} · с ошибкой {{ progress.failed }}
+    {%- if progress.skipped %} · пропущено с прошлой ошибкой {{ progress.skipped }}{% endif -%}
   </div>
 
   {% if progress.aborted %}

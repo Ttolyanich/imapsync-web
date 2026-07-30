@@ -1,6 +1,7 @@
 """Сквозная проверка этапа 1 через HTTP: вход -> сервер -> проект -> импорт."""
 
 import http.cookiejar
+import json
 import os
 import re
 import sys
@@ -189,6 +190,14 @@ check("в строке ящика есть кнопка разворота", "da
 check("статус переноса показан честно", "не начинался" in html)
 check("раскрытые строки переживают перерисовку", "__openMailboxes" in html)
 
+# Фоновое обновление: только цифры, без разметки.
+status, body, _ = get(f"/projects/{project_id}/live")
+live = json.loads(body)
+check("живое состояние отдаётся", "mailboxes" in live and "structure" in live)
+check("в нём нет разметки", "<" not in body)
+check("строки для показа готовит сервер",
+      all("counts" in m and "status" in m for m in live["mailboxes"]))
+
 # id ящиков зависят от истории импортов — берём реальный из разметки.
 mailbox_ids = re.findall(r'data-mailbox-toggle="(\d+)"', html)
 check("id ящиков найдены в таблице", bool(mailbox_ids), f"({mailbox_ids})")
@@ -209,7 +218,6 @@ check("досинхрон принят", status == 200)
 status, html, _ = get(f"/projects/{project_id}/migrate/progress")
 check("партиал прогресса переноса отдаётся", status == 200)
 
-import json
 import time as _time
 
 _time.sleep(1.5)
