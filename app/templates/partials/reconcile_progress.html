@@ -3,7 +3,10 @@
   <div class="bar-labels">
     <span>
       <b>{% if progress.running %}Опрос приёмника…{% else %}Сверка завершена{% endif %}</b>
-      {% if progress.current %}<span class="muted">· {{ progress.current }}</span>{% endif %}
+      {# Только пока идёт — см. пояснение в check_progress.html. #}
+      {% if progress.running and progress.current %}
+        <span class="muted">· {{ progress.current }}</span>
+      {% endif %}
     </span>
     <span style="color:var(--accent);font-weight:700">{{ progress.percent }}%</span>
   </div>

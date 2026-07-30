@@ -3,7 +3,11 @@
   <div class="bar-labels">
     <span>
       <b>{% if progress.running %}Проверка доступов выполняется{% else %}Проверка доступов завершена{% endif %}</b>
-      {% if progress.current %}<span class="muted">· {{ progress.current }}</span>{% endif %}
+      {# Только пока идёт: у завершённого прогона это поле застывает на
+         последнем ящике и читается так, будто проверяли его одного. #}
+      {% if progress.running and progress.current %}
+        <span class="muted">· {{ progress.current }}</span>
+      {% endif %}
     </span>
     <span data-live="check-percent"
           style="color:var(--accent);font-weight:700">{{ progress.percent }}%</span>
