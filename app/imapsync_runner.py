@@ -370,14 +370,18 @@ class ImapsyncRun:
     def speed_bytes_per_second(self) -> float:
         now = time.monotonic()
         with self._lock:
-            window = [(t, b) for t, b in self._window if now - t <= 300]
+            if not self._window:
+                return 0.0
+            window = [(t, b) for t, b in self._window if now - t <= 60]
             self._window = window
-        if len(window) < 2:
+        if not window:
             return 0.0
-        span = window[-1][0] - window[0][0]
-        if span <= 0:
+        # Если последнее перенесённое письмо было более 15 секунд назад — скорость 0
+        if now - window[-1][0] > 15:
             return 0.0
-        return sum(b for _, b in window[1:]) / span
+        total_bytes = sum(b for _, b in window)
+        span = max(1.0, now - window[0][0])
+        return total_bytes / span
 
     def stop(self) -> None:
         self._stop.set()
