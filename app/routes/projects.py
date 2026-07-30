@@ -699,9 +699,12 @@ def _launch(project_id: int, *, include_done: bool, action: str):
         project = _get(db, project_id)
         if not can_edit_project(project):
             abort(403)
+        is_ready_cond = (
+            (Mailbox.src_check_result == "ok") & (Mailbox.dst_check_result == "ok")
+        ) | Mailbox.status.in_([MB_CHECK_OK, MB_QUEUED, MB_RUNNING, MB_DONE])
         ready = (
             db.query(func.count(Mailbox.id))
-            .filter(Mailbox.project_id == project_id, Mailbox.status == MB_CHECK_OK)
+            .filter(Mailbox.project_id == project_id, is_ready_cond)
             .scalar()
         )
         log_action(db, user=current_user(), action=action,
@@ -750,11 +753,16 @@ def _get(db, project_id: int) -> Project:
 
 
 def _counts(db, project_id: int) -> dict:
+    is_ok = (
+        (Mailbox.src_check_result == "ok") & (Mailbox.dst_check_result == "ok")
+    ) | Mailbox.status.in_([MB_CHECK_OK, MB_QUEUED, MB_RUNNING, MB_DONE])
+    is_failed = (Mailbox.status.in_([MB_CHECK_FAILED, MB_FAILED])) | (Mailbox.auth_locked == True)
+
     total, ok, failed, messages, size = (
         db.query(
             func.count(Mailbox.id),
-            func.sum(case((Mailbox.status == MB_CHECK_OK, 1), else_=0)),
-            func.sum(case((Mailbox.status == MB_CHECK_FAILED, 1), else_=0)),
+            func.sum(case((is_ok, 1), else_=0)),
+            func.sum(case((is_failed, 1), else_=0)),
             func.sum(Mailbox.total_messages),
             func.sum(Mailbox.total_bytes),
         )
