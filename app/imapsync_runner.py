@@ -129,6 +129,7 @@ SUMMARY_PATTERNS = {
     "messages": re.compile(r"^Messages transferred\s*:\s*(\d+)"),
     "bytes": re.compile(r"^Total bytes transferred\s*:\s*(\d+)"),
     "skipped": re.compile(r"^Messages skipped\s*:\s*(\d+)"),
+    "skipped_bytes": re.compile(r"^Total bytes skipped\s*:\s*(\d+)"),
     "errors": re.compile(r"^Detected\s+(\d+)\s+errors?"),
 }
 FOLDERS_SYNCED_PATTERN = re.compile(r"^Folders synced\s*:\s*(\d+)\s*/\s*(\d+)")
@@ -239,6 +240,7 @@ class RunResult:
     # Итоговая сводка imapsync: она и есть источник правды по цифрам.
     summary_seen: bool = False
     skipped_messages: int = 0
+    skipped_bytes: int = 0
     folders_synced: int = 0
     folders_total: int = 0
     reported_errors: int = 0
@@ -266,6 +268,21 @@ class RunResult:
             and self.copied_messages == 0
             and self.recognised_lines == 0
         )
+
+    @property
+    def on_destination_messages(self) -> int:
+        """Сколько писем ящика лежит на приёмнике по итогам прогона.
+
+        imapsync считает «пропущенными» письма, которые уже есть на приёмнике.
+        Для прогресса ящика важны обе части: иначе после дельта-прогона полоса
+        показывала бы жалкие проценты у полностью перенесённого ящика —
+        «перенесён» и 11% одновременно.
+        """
+        return self.copied_messages + self.skipped_messages
+
+    @property
+    def on_destination_bytes(self) -> int:
+        return self.copied_bytes + self.skipped_bytes
 
     @property
     def summary(self) -> str:
@@ -478,6 +495,8 @@ class ImapsyncRun:
                 self.result.copied_bytes = value
             elif field_name == "skipped":
                 self.result.skipped_messages = value
+            elif field_name == "skipped_bytes":
+                self.result.skipped_bytes = value
             else:
                 self.result.reported_errors = value
             return True

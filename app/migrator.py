@@ -337,13 +337,23 @@ class MigrationRunner:
         # «сколько из ящика уже лежит на приёмнике», а не «сколько за этот запуск».
         base_messages, base_bytes = self._baselines.get(tracker.mailbox_id, (0, 0))
         folders = run.folders
+        # Пока прогон идёт, к уже лежащему на приёмнике прибавляем сегодняшнее.
+        # Ограничиваем известным объёмом ящика: иначе на дельте счётчик уходил
+        # бы за собственный знаменатель.
+        messages = base_messages + run.result.copied_messages
+        payload = base_bytes + run.result.copied_bytes
+        if tracker.total_messages:
+            messages = min(messages, tracker.total_messages)
+        if tracker.total_bytes:
+            payload = min(payload, tracker.total_bytes)
+
         with self._lock:
             tracker.folder = run.current_folder
             tracker.last_line = run.last_line
             tracker.output_recognised = run.output_recognised
             tracker.speed = run.speed_bytes_per_second
-            tracker.done_messages = base_messages + run.result.copied_messages
-            tracker.done_bytes = base_bytes + run.result.copied_bytes
+            tracker.done_messages = messages
+            tracker.done_bytes = payload
             tracker.folders = folders
 
     # -- работа с БД --------------------------------------------------------
@@ -401,8 +411,17 @@ class MigrationRunner:
             mailbox.finished_at = datetime.now(timezone.utc)
             mailbox.last_exit_code = result.exit_code
             mailbox.last_error = None if result.ok else describe_exit(result.exit_code)
-            mailbox.done_messages += result.copied_messages
-            mailbox.done_bytes += result.copied_bytes
+
+            if result.summary_seen:
+                # Сводка описывает ящик целиком: перенесённые плюс те, что уже
+                # были на приёмнике. Это и есть «сколько писем ящика доехало»,
+                # поэтому значение задаём, а не накапливаем — иначе повторные
+                # прогоны считали бы одни и те же письма снова и снова.
+                mailbox.done_messages = result.on_destination_messages
+                mailbox.done_bytes = result.on_destination_bytes
+            else:
+                mailbox.done_messages += result.copied_messages
+                mailbox.done_bytes += result.copied_bytes
             mailbox.current_folder = None
             if result.log_path is not None:
                 mailbox.log_filename = result.log_path.name
