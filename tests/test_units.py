@@ -178,6 +178,38 @@ check("пароль вычищен", _scrub("password is ХАЛВА", ("ХАЛВ
 check("LOGIN замаскирован",
       _scrub("1 LOGIN user@dom s3cret", ()), "1 LOGIN user@dom ***")
 
+print("\n--- боевой лог: прогон, который ничего не сделал ---")
+# Настоящий лог с сервера 29.07.2026 (адреса обезличены). imapsync увидел в
+# окружении переменные gunicorn, решил, что запущен как CGI-скрипт, напечатал
+# HTTP-заголовки и вышел с кодом 0, не тронув ящик. Панель показала «перенесён».
+from app.imapsync_runner import CGI_CONTEXT_PATTERN, RunResult  # noqa: E402
+
+fixture = _Path(__file__).parent / "fixtures" / "cgi_noop_run.log"
+lines = fixture.read_text(encoding="utf-8").splitlines()
+
+replay = RunResult(exit_code=0)
+for line in lines:
+    if CGI_CONTEXT_PATTERN.search(line):
+        replay.cgi_context = True
+    event = parse_line(line)
+    if event.kind == "copied":
+        replay.copied_messages += 1
+        replay.recognised_lines += 1
+    elif event.kind == "folder":
+        replay.recognised_lines += 1
+
+check("режим CGI распознан", replay.cgi_context, True)
+check("писем не перенесено", replay.copied_messages, 0)
+check("строк о работе в выводе нет", replay.recognised_lines, 0)
+check("прогон помечен как «ничего не сделал»", replay.did_nothing, True)
+
+# Обратная сторона: нормальный прогон не должен попадать под это правило.
+normal = RunResult(exit_code=0, copied_messages=5, recognised_lines=12)
+check("обычный прогон не считается пустым", normal.did_nothing, False)
+# Дельта-прогон: копировать нечего, но папки обработаны — это успех.
+delta = RunResult(exit_code=0, copied_messages=0, recognised_lines=7)
+check("дельта без новых писем не считается пустой", delta.did_nothing, False)
+
 print("\n--- коды возврата ---")
 from app.imapsync_runner import FATAL_EXITS, RETRIABLE_EXITS  # noqa: E402
 

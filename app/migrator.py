@@ -293,6 +293,15 @@ class MigrationRunner:
                             note="прогон остановлен вручную")
                 return
 
+            if result.ok and result.did_nothing:
+                # Код возврата 0, но в выводе нет ни одной строки о работе.
+                # Именно так выглядел запуск imapsync в режиме CGI: ящик не
+                # тронут, а панель показывала «перенесён». Молчать нельзя —
+                # человек переключит MX на пустой ящик.
+                self._store(mailbox_id, result, status=MB_FAILED, note=_noop_note(result))
+                self._account(done=False)
+                return
+
             if result.ok:
                 self._store(mailbox_id, result, status=MB_DONE)
                 self._account(done=True)
@@ -406,7 +415,7 @@ class MigrationRunner:
                 level = "warning"
                 code = "migrate_interrupted"
             else:
-                message = f"{mailbox.src_email}: {describe_exit(result.exit_code)}"
+                message = f"{mailbox.src_email}: {note or describe_exit(result.exit_code)}"
                 level = "error"
                 code = "migrate_failed"
                 if result.exit_code == 113:
@@ -550,6 +559,21 @@ def _side(endpoint: Endpoint, mailbox_login: str, secret: str | None) -> SideSpe
         verify_cert=endpoint.verify_cert,
         login=login,
         secret=password,
+    )
+
+
+def _noop_note(result) -> str:
+    """Объяснение для случая «вышел с нулём, но ничего не сделал»."""
+    if result.cgi_context:
+        return (
+            "imapsync запустился в режиме CGI и вышел, не перенеся ни одного письма. "
+            "Так бывает, когда процессу достались переменные окружения веб-сервера. "
+            "Обнови образ до последней версии и запусти «Досинхронить»"
+        )
+    return (
+        "imapsync завершился успешно, но не перенёс ни одного письма и не сообщил "
+        "ни о переносе, ни об обработке папок. Проверь подробный лог прогона: "
+        "возможно, все папки попали в исключения"
     )
 
 

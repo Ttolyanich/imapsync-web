@@ -99,6 +99,14 @@ SIZE_PATTERN = re.compile(r"\{(\d+)\}")
 SKIPPED_PATTERN = re.compile(r"\bskip(?:ped|ping)\b", re.IGNORECASE)
 ERROR_PATTERN = re.compile(r"^\s*(?:Err|ERROR|Error)\b|\bfailure\b", re.IGNORECASE)
 
+# imapsync умеет работать как CGI-скрипт и включает этот режим сам, если видит
+# в окружении переменные веб-сервера. В нём он печатает HTTP-заголовки и выходит
+# с кодом 0, не перенося ни одного письма. Переменные мы вычищаем перед запуском,
+# но если режим всё же включился — это надо заметить, а не считать успехом.
+CGI_CONTEXT_PATTERN = re.compile(
+    r"Under cgi context|Status:\s*\d+\s+OK to sync IMAP boxes", re.IGNORECASE
+)
+
 
 @dataclass
 class LineEvent:
@@ -161,10 +169,27 @@ class RunResult:
     error_lines: int = 0
     log_path: Path | None = None
     stopped: bool = False
+    # Сколько строк вывода парсер вообще опознал и включался ли режим CGI.
+    recognised_lines: int = 0
+    cgi_context: bool = False
 
     @property
     def ok(self) -> bool:
         return self.exit_code == EXIT_OK
+
+    @property
+    def did_nothing(self) -> bool:
+        """Вышел успешно, но следов работы в выводе нет.
+
+        Так выглядел запуск в режиме CGI: код возврата 0, а ящик не тронут.
+        Считать это успехом нельзя — человек увидит «перенесён» и переключит
+        MX на пустой ящик. Ложная тревога здесь безопаснее молчания.
+        """
+        return (
+            self.exit_code == EXIT_OK
+            and self.copied_messages == 0
+            and self.recognised_lines == 0
+        )
 
     @property
     def retriable(self) -> bool:
@@ -325,16 +350,21 @@ class ImapsyncRun:
         with self._lock:
             self._last_line = line.strip()[:300]
 
+        if CGI_CONTEXT_PATTERN.search(line):
+            self.result.cgi_context = True
+
         if event.kind == "folder":
             with self._lock:
                 self._current_folder = event.folder
                 self._recognised_lines += 1
+                self.result.recognised_lines = self._recognised_lines
         elif event.kind == "copied":
             size = event.size or 0
             self.result.copied_messages += 1
             self.result.copied_bytes += size
             with self._lock:
                 self._recognised_lines += 1
+                self.result.recognised_lines = self._recognised_lines
                 self._window.append((time.monotonic(), size))
         elif event.kind == "error":
             self.result.error_lines += 1
