@@ -318,12 +318,23 @@ def _as_int(value) -> int | None:
         return None
 
 
-def _encode_folder(name: str) -> str:
-    """Как имя папки выглядит на проводе (modified UTF-7). Показываем человеку
-    всегда декодированное, но исходное храним — пригодится в логах и отладке."""
+def encode_folder_name(name: str) -> str:
+    """Имя папки так, как оно выглядит в протоколе IMAP (modified UTF-7).
+
+    Именно это имя нужно передавать imapsync в параметрах командной строки —
+    он сам об этом пишет в своём выводе: «X is the imap foldername you have to
+    use in command line options». Если отдать ему читаемое «Спам», аргумент
+    приедет искажённым и не совпадёт ни с одной папкой.
+    """
+    if name.isascii():
+        return name
     try:
         from imapclient import imap_utf7
 
         return imap_utf7.encode(name).decode("ascii", "replace")
     except Exception:  # noqa: BLE001 — не критично
         return name
+
+
+# Прежнее внутреннее имя оставлено, чтобы не трогать вызовы внутри модуля.
+_encode_folder = encode_folder_name

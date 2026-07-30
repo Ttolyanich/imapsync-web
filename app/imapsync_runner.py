@@ -90,8 +90,17 @@ def describe_exit(code: int | None) -> str:
 # в одном месте и рассчитаны на то, что часть из них может не сработать.
 # Если после первого боевого прогона окажется, что формат другой — правится
 # только этот блок.
+# Формат подтверждён боевым логом 30.07.2026:
+#   Folder     1/5 [&BB4E...-] = [Отправленные] -> [&BB4E...-] = [Отправленные]
+#   Folder     5/5 [INBOX]                      -> [INBOX]
+# Имя в первых скобках — то, как папка называется в протоколе, во вторых —
+# читаемое. Показываем человеку читаемое, если оно есть.
 FOLDER_PATTERNS = (
-    re.compile(r"^\s*(?:\++\s*)?(?:Folder|folder)\s+\[(?P<src>[^\]]*)\]\s*->\s*\[(?P<dst>[^\]]*)\]"),
+    re.compile(
+        r"^\s*Folder\s+\d+/\d+\s+\[(?P<raw>[^\]]*)\]\s*"
+        r"(?:=\s*\[(?P<src>[^\]]*)\]\s*)?->"
+    ),
+    re.compile(r"^\s*(?:\++\s*)?(?:Folder|folder)\s+\[(?P<src>[^\]]*)\]\s*->\s*\[[^\]]*\]"),
     re.compile(r"^\s*From folder\s+\[(?P<src>[^\]]*)\]"),
 )
 COPIED_PATTERN = re.compile(r"\bcopied\b", re.IGNORECASE)
@@ -107,6 +116,23 @@ CGI_CONTEXT_PATTERN = re.compile(
     r"Under cgi context|Status:\s*\d+\s+OK to sync IMAP boxes", re.IGNORECASE
 )
 
+# Итоговая сводка imapsync — единственный надёжный источник цифр. Построчный
+# разбор годится для живого прогресса, но окончательные значения берём отсюда:
+#   ++++ Statistics
+#   Messages transferred                    : 0
+#   Messages skipped                        : 12
+#   Total bytes transferred                 : 0 (0.000 KiB)
+#   Folders synced                          : 5/5 synced
+#   Detected 0 errors
+STATS_MARKER = re.compile(r"^\+\+\+\+\s*Statistics")
+SUMMARY_PATTERNS = {
+    "messages": re.compile(r"^Messages transferred\s*:\s*(\d+)"),
+    "bytes": re.compile(r"^Total bytes transferred\s*:\s*(\d+)"),
+    "skipped": re.compile(r"^Messages skipped\s*:\s*(\d+)"),
+    "errors": re.compile(r"^Detected\s+(\d+)\s+errors?"),
+}
+FOLDERS_SYNCED_PATTERN = re.compile(r"^Folders synced\s*:\s*(\d+)\s*/\s*(\d+)")
+
 
 @dataclass
 class LineEvent:
@@ -119,7 +145,9 @@ def parse_line(line: str) -> LineEvent:
     for pattern in FOLDER_PATTERNS:
         match = pattern.search(line)
         if match:
-            return LineEvent("folder", folder=match.group("src").strip())
+            groups = match.groupdict()
+            name = groups.get("src") or groups.get("raw") or ""
+            return LineEvent("folder", folder=name.strip())
 
     if COPIED_PATTERN.search(line):
         size_match = SIZE_PATTERN.search(line)
@@ -172,6 +200,12 @@ class RunResult:
     # Сколько строк вывода парсер вообще опознал и включался ли режим CGI.
     recognised_lines: int = 0
     cgi_context: bool = False
+    # Итоговая сводка imapsync: она и есть источник правды по цифрам.
+    summary_seen: bool = False
+    skipped_messages: int = 0
+    folders_synced: int = 0
+    folders_total: int = 0
+    reported_errors: int = 0
 
     @property
     def ok(self) -> bool:
@@ -183,13 +217,33 @@ class RunResult:
 
         Так выглядел запуск в режиме CGI: код возврата 0, а ящик не тронут.
         Считать это успехом нельзя — человек увидит «перенесён» и переключит
-        MX на пустой ящик. Ложная тревога здесь безопаснее молчания.
+        MX на пустой ящик.
+
+        Итоговая сводка снимает подозрение сразу: если imapsync её напечатал,
+        значит он дошёл до конца и обошёл папки. Ноль перенесённых писем при
+        этом — нормальная дельта, а не поломка.
         """
+        if self.summary_seen:
+            return False
         return (
             self.exit_code == EXIT_OK
             and self.copied_messages == 0
             and self.recognised_lines == 0
         )
+
+    @property
+    def summary(self) -> str:
+        """Короткая человеческая сводка по итогам прогона."""
+        if not self.summary_seen:
+            return f"перенесено {self.copied_messages} писем"
+        parts = [f"перенесено {self.copied_messages} писем"]
+        if self.skipped_messages:
+            parts.append(f"уже было на приёмнике {self.skipped_messages}")
+        if self.folders_total:
+            parts.append(f"папок обработано {self.folders_synced}/{self.folders_total}")
+        if self.reported_errors:
+            parts.append(f"ошибок {self.reported_errors}")
+        return ", ".join(parts)
 
     @property
     def retriable(self) -> bool:
@@ -344,6 +398,39 @@ class ImapsyncRun:
         self.result.exit_code = self._process.returncode
         self.result.stopped = self._stop.is_set()
 
+    def _consume_summary(self, line: str) -> bool:
+        """Разобрать строку итоговой сводки. True — строка была из сводки.
+
+        Цифры отсюда перекрывают построчный подсчёт: построчный формат мы
+        угадываем, а сводку imapsync печатает явно и одинаково.
+        """
+        if STATS_MARKER.search(line):
+            self.result.summary_seen = True
+            return True
+
+        match = FOLDERS_SYNCED_PATTERN.search(line)
+        if match:
+            self.result.folders_synced = int(match.group(1))
+            self.result.folders_total = int(match.group(2))
+            return True
+
+        for field_name, pattern in SUMMARY_PATTERNS.items():
+            match = pattern.search(line)
+            if not match:
+                continue
+            value = int(match.group(1))
+            if field_name == "messages":
+                self.result.copied_messages = value
+            elif field_name == "bytes":
+                self.result.copied_bytes = value
+            elif field_name == "skipped":
+                self.result.skipped_messages = value
+            else:
+                self.result.reported_errors = value
+            return True
+
+        return False
+
     def _consume(self, line: str) -> None:
         event = parse_line(line)
 
@@ -352,6 +439,9 @@ class ImapsyncRun:
 
         if CGI_CONTEXT_PATTERN.search(line):
             self.result.cgi_context = True
+
+        if self._consume_summary(line):
+            return
 
         if event.kind == "folder":
             with self._lock:

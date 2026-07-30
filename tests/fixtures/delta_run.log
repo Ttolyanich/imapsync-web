@@ -1,0 +1,314 @@
+# imapsync --host1 imap.example-src.com --port1 993 --user1 user@example.com --passfile1 <файл с паролем> --host2 mail.example-dst.local --port2 993 --user2 user@example.com --passfile2 <файл с паролем> --nolog --nofoldersizes --nofoldersizesatend --usecache --tmpdir /data/imapsync-cache/project_1/mailbox_1 --automap --ssl1 --ssl2 --f1f2 Отправленные=Sent Items --f1f2 Черновики=Drafts --f1f2 Корзина=Deleted Items --exclude ^(Спам)$
+# пароли переданы файлами, в командной строке их нет
+
+Here is imapsync 2.314 /usr/local/bin/imapsync on host 71c0f0ad9a7e, a linux system with 0.2/3.8 free GiB of RAM, 6.75% used by processes.
+with Perl 5.36.0 and Mail::IMAPClient 3.43
+Transfer started at Thursday 30 July 2026-07-30 05:04:37 +0300 MSK
+PID is 20 my PPID is 9
+No log file because of option --nolog
+Load is 0.19 0.05 0.01 2/305 on 2 cores
+Real user id is root (uid 0)
+Effective user id is root (euid 0)
+$RCSfile: imapsync,v $ $Revision: 2.314 $ $Date: 2025/09/23 16:55:17 $ 
+Command line used, run by /usr/bin/perl:
+/usr/local/bin/imapsync --host1 imap.example-src.com --port1 993 --user1 user@example.com --passfile1 /tmp/imapsync-creds-5ap6ysz9/p1 --host2 mail.example-dst.local --port2 993 --user2 user@example.com --passfile2 /tmp/imapsync-creds-5ap6ysz9/p2 --nolog --nofoldersizes --nofoldersizesatend --usecache --tmpdir /data/imapsync-cache/project_1/mailbox_1 --automap --ssl1 --ssl2 --f1f2 ÐÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð½ÑÐµ=Sent Items --f1f2 Ð§ÐµÑÐ½Ð¾Ð²Ð¸ÐºÐ¸=Drafts --f1f2 ÐÐ¾ÑÐ·Ð¸Ð½Ð°=Deleted Items --exclude ^(Ð¡Ð¿Ð°Ð¼)$
+Current directory is /app
+Temp directory is /data/imapsync-cache/project_1/mailbox_1 ( to change it use --tmpdir dirpath )
+Creating temp directory /data/imapsync-cache/project_1/mailbox_1
+kill -QUIT 20 # special behavior: call to sub catch_exit
+kill -TERM 20 # special behavior: call to sub catch_exit
+kill -INT 20 # special behavior: call to sub catch_reconnect
+kill -HUP 20 # special behavior: call to sub catch_print
+kill -USR1 20 # special behavior: call to sub toggle_sleep
+Logging is off. To turn on logging, use --log
+File /data/imapsync-cache/project_1/mailbox_1/imapsync.pid does not exist
+PID file is /data/imapsync-cache/project_1/mailbox_1/imapsync.pid ( to change it, use --pidfile filepath ; to avoid it use --pidfile "" )
+Writing my PID 20 in /data/imapsync-cache/project_1/mailbox_1/imapsync.pid
+Modules version list ( use --no-modulesversion to turn off printing this Perl modules list ):
+Authen::NTLM         1.09
+CGI                  4.55
+Compress::Zlib       2.106
+Crypt::OpenSSL::RSA  0.33
+Digest::HMAC_MD5     1.04
+Digest::HMAC_SHA1    1.04
+Digest::MD5          2.58
+Digest::SHA          6.02
+Encode               3.17
+Encode::IMAPUTF7     1.05
+File::Copy::Recursive 0.45
+File::Spec           3.84
+Getopt::Long         2.52
+HTML::Entities       3.81
+IO::Socket           1.49
+IO::Socket::INET     1.49
+IO::Socket::INET6    2.73
+IO::Socket::IP       0.41
+IO::Socket::SSL      2.081
+IO::Tee              0.65
+JSON                 4.10
+JSON::WebToken       0.10
+LWP                  6.68
+MIME::Base64         3.16
+Mail::IMAPClient     3.43
+Net::Ping            2.74
+Net::SSLeay          1.92
+Term::ReadKey        2.38
+Test::MockObject     1.20200122
+Time::HiRes          1.977
+Unicode::String      2.10
+
+Info: will resync flags for already transferred messages. Use --noresyncflags to not resync flags.
+SSL debug mode level is --debugssl 1 (can be set from 0 meaning no debug to 4 meaning max debug)
+Host1: SSL default mode is like --sslargs1 "SSL_verify_mode=0", meaning for host1 SSL_VERIFY_NONE, ie, do not check the server certificate.
+Host1: Use --sslargs1 SSL_verify_mode=1 to have SSL_VERIFY_PEER, ie, check the server certificate. of host1
+Host2: SSL default mode is like --sslargs2 "SSL_verify_mode=0", meaning for host2 SSL_VERIFY_NONE, ie, do not check the server certificate.
+Host2: Use --sslargs2 SSL_verify_mode=1 to have SSL_VERIFY_PEER, ie, check the server certificate. of host2
+Info: turned ON syncinternaldates, will set the internal dates (arrival dates) on host2 same as host1.
+Host1: will try to use LOGIN authentication *** host1
+Host2: will try to use LOGIN authentication *** host2
+Host1: imap connection timeout is 120 seconds
+Host2: imap connection timeout is 120 seconds
+Host1: imap connection keepalive is on on host1. Use --nokeepalive1 to disable it.
+Host2: imap connection keepalive is on on host2. Use --nokeepalive2 to disable it.
+Host1: IMAP server [imap.example-src.com] port [993] user [user@example.com]
+Host2: IMAP server [mail.example-dst.local] port [993] user [user@example.com]
+Host1: connecting and login on *** [imap.example-src.com] port [993] with user [user@example.com]
+Host1 IP address: 94.100.180.90 Local IP address: 172.23.0.2
+Host1 banner: * OK IMAP4 ready
+Host1 capability before authentication: IMAP4rev1 ID XLIST UIDPLUS UNSELECT MOVE LIST-STATUS SASL-IR AUTH=PLAIN AUTH=XOAUTH2 AUTH
+Host1: success login on *** with user [user@example.com] auth [LOGIN] or [LOGIN]
+Host2: connecting and login on *** [mail.example-dst.local] port [993] with user [user@example.com]
+Host2 IP address: 194.31.135.228 Local IP address: 172.23.0.2
+Host2 banner: * OK The Microsoft Exchange IMAP4 service is ready.
+Host2 capability before authentication: IMAP4 IMAP4rev1 AUTH=PLAIN AUTH=NTLM AUTH=GSSAPI SASL-IR UIDPLUS MOVE ID UNSELECT CHILDREN IDLE NAMESPACE LITERAL+ AUTH
+Host2: success login on *** with user [user@example.com] auth [LOGIN] or [LOGIN]
+Host1: state Authenticated
+Host2: state Authenticated
+Host1 capability once authenticated: IMAP4rev1 ID XLIST UIDPLUS UNSELECT MOVE LIST-STATUS IDLE
+Host2 capability once authenticated: IMAP4 IMAP4rev1 AUTH=PLAIN AUTH=NTLM AUTH=GSSAPI SASL-IR UIDPLUS MOVE ID UNSELECT XPROXY3 CLIENTNETWORKPRESENCELOCATION CHILDREN IDLE NAMESPACE LITERAL+ AUTH
+Host1: found ID capability. Sending/receiving ID, presented in raw IMAP for now.
+In order to avoid sending/receiving ID, use option --noid
+Sending: 4 ID ("name" "imapsync" "version" "2.314" "os" "linux" "vendor" "Gilles LAMIRAL" "support-url" "https://imapsync.lamiral.info/" "date" "23-Sep-2025 16:55:17 +0000" "side" "host1")
+Sent 181 bytes
+Read: 	* ID ("name" "Mail.ru imap phoenix edition" "vendor" "Mail.ru corporation" "support-url" "http://help.mail.ru/mail-help")
+  	4 OK ID completed
+Host2: found ID capability. Sending/receiving ID, presented in raw IMAP for now.
+In order to avoid sending/receiving ID, use option --noid
+Sending: 4 ID ("name" "imapsync" "version" "2.314" "os" "linux" "vendor" "Gilles LAMIRAL" "support-url" "https://imapsync.lamiral.info/" "date" "23-Sep-2025 16:55:17 +0000" "side" "host2")
+Sent 181 bytes
+Read: 	* ID ("name" "Microsoft.Exchange.Imap4.Imap4Server" "version" "15.2")
+  	4 OK ID completed
+Host2: No QUOTA capability found, skipping it.
+Host1: Compression is off. Use --compress1 to allow compression on host1
+Host2: Compression is off. Use --compress2 to allow compression on host2
+Compression often generates annoying errors, especially with SSL connexions, Gmail, Office365. So, avoid it.
+Host1: found 5 folders.
+Host2: found 12 folders.
+Host1: guessing separator from folder listing: [/]
+Host1: No NAMESPACE capability, so using guessed separator [/]
+You can set the separator character with the --sep1 option,
+the complete listing of folders may help you to find it
+[INBOX]
+[&BCEEPwQwBDw-]
+[&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-]
+[&BCcENQRABD0EPgQyBDgEOgQ4-]
+[&BBoEPgRABDcEOAQ9BDA-]
+Host2: guessing separator from folder listing: [/]
+Host2: separator given by NAMESPACE: [/]
+Host1: guessing prefix from folder listing: []
+Host1: No NAMESPACE capability so using guessed prefix []
+You can set the prefix namespace with the --prefix1 option,
+the folowing listing of folders may help you to find it:
+[INBOX]
+[&BCEEPwQwBDw-]
+[&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-]
+[&BCcENQRABD0EPgQyBDgEOgQ4-]
+[&BBoEPgRABDcEOAQ9BDA-]
+Host2: guessing prefix from folder listing: []
+Host2: prefix given by NAMESPACE: []
+Host1: separator and prefix: [/][]
+Host2: separator and prefix: [/][]
+Looking at INBOX or Inbox on both sides and deciding of the mapping to apply. Use --nofixInboxINBOX to avoid this behavior.
+INBOX INBOX on both sides so no mapping applied.
+Including all folders found by default. Use --subscribed or --folder or --folderrec or --include to select specific folders. Use --exclude to unselect specific folders.
+Excluding folders matching pattern ^(Ð¡Ð¿Ð°Ð¼)$
+
+Host1: Checking wanted folders exist. Use --nocheckfoldersexist to avoid this check (shared of public namespace targeted).
+Host1: Checking wanted folders are selectable. Use --nocheckselectable to avoid this check.
+Turned on automapping folders ( use --noautomap to turn off automapping )
+Host1: special &BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1- = \Sent
+Host1: special &BCcENQRABD0EPgQyBDgEOgQ4- = \Drafts
+Host1: special &BBoEPgRABDcEOAQ9BDA- = \Trash
+
+Host2: special &BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA- = \Junk
+Host2: special &BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1- = \Sent
+Host2: special &BCMENAQwBDsENQQ9BD0ESwQ1- = \Trash
+Host2: special &BCcENQRABD0EPgQyBDgEOgQ4- = \Drafts
+
+
+++++ Listing folders
+All foldernames are presented between brackets like [X] where X is the foldername.
+When a foldername contains non-ASCII characters it is presented in the form
+[X] = [Y] where
+X is the imap foldername you have to use in command line options and
+Y is the utf8 output just printed for convenience, to recognize it.
+
+Host1: folders list (first the raw imap format then the [X] = [Y]):
+* LIST (\Inbox) "/" "INBOX"
+* LIST (\Spam) "/" "&BCEEPwQwBDw-"
+* LIST (\Sent) "/" "&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-"
+* LIST (\Drafts) "/" "&BCcENQRABD0EPgQyBDgEOgQ4-"
+* LIST (\Trash) "/" "&BBoEPgRABDcEOAQ9BDA-"
+15 OK LIST done
+
+[&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] = [Отправленные]
+[&BBoEPgRABDcEOAQ9BDA-] = [Корзина]
+[&BCEEPwQwBDw-] = [Спам]
+[&BCcENQRABD0EPgQyBDgEOgQ4-] = [Черновики]
+[INBOX]
+
+Host2: folders list (first the raw imap format then the [X] = [Y]):
+* LIST (\Marked \HasNoChildren) "/" INBOX
+* LIST (\HasNoChildren) "/" &BBYEQwRABD0EMAQ7-
+* LIST (\HasNoChildren) "/" &BBcEMAQ0BDAERwQ4-
+* LIST (\HasNoChildren) "/" &BBcEMAQ8BDUEQgQ6BDg-
+* LIST (\HasNoChildren) "/" &BBgEQQRFBD4ENARPBEkEOAQ1-
+* LIST (\HasChildren) "/" &BBoEMAQ7BDUEPQQ0BDAEQARM-
+* LIST (\HasNoChildren) "/" "&BBoEMAQ7BDUEPQQ0BDAEQARM-/&BBQEPQQ4- &BEAEPgQ2BDQENQQ9BDgETw-"
+* LIST (\HasChildren) "/" &BBoEPgQ9BEIEMAQ6BEIESw-
+* LIST (\HasNoChildren \Junk) "/" "&BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA-"
+* LIST (\HasNoChildren \Sent) "/" &BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-
+* LIST (\HasNoChildren \Trash) "/" &BCMENAQwBDsENQQ9BD0ESwQ1-
+* LIST (\HasNoChildren \Drafts) "/" &BCcENQRABD0EPgQyBDgEOgQ4-
+10 OK LIST completed.
+
+[&BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA-] = [Нежелательная почта]
+[&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] = [Отправленные]
+[&BBYEQwRABD0EMAQ7-] = [Журнал]
+[&BBcEMAQ0BDAERwQ4-] = [Задачи]
+[&BBcEMAQ8BDUEQgQ6BDg-] = [Заметки]
+[&BBgEQQRFBD4ENARPBEkEOAQ1-] = [Исходящие]
+[&BBoEMAQ7BDUEPQQ0BDAEQARM-] = [Календарь]
+[&BBoEMAQ7BDUEPQQ0BDAEQARM-/&BBQEPQQ4- &BEAEPgQ2BDQENQQ9BDgETw-] = [Календарь/Дни рождения]
+[&BBoEPgQ9BEIEMAQ6BEIESw-] = [Контакты]
+[&BCMENAQwBDsENQQ9BD0ESwQ1-] = [Удаленные]
+[&BCcENQRABD0EPgQyBDgEOgQ4-] = [Черновики]
+[INBOX]
+
+Folders in host2 not in host1:
+[&BBoEPgQ9BEIEMAQ6BEIESw-] = [Контакты]
+[&BBoEMAQ7BDUEPQQ0BDAEQARM-/&BBQEPQQ4- &BEAEPgQ2BDQENQQ9BDgETw-] = [Календарь/Дни рождения]
+[&BBoEMAQ7BDUEPQQ0BDAEQARM-] = [Календарь]
+[&BBgEQQRFBD4ENARPBEkEOAQ1-] = [Исходящие]
+[&BBcEMAQ8BDUEQgQ6BDg-] = [Заметки]
+[&BBcEMAQ0BDAERwQ4-] = [Задачи]
+[&BBYEQwRABD0EMAQ7-] = [Журнал]
+
+Folders mapping from --automap feature (use --f1f2 to override any mapping):
+[&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] = [Отправленные] -> [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] = [Отправленные]
+[&BCEEPwQwBDw-] = [Спам]                 -> [&BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA-] = [Нежелательная почта]
+[&BCcENQRABD0EPgQyBDgEOgQ4-] = [Черновики] -> [&BCcENQRABD0EPgQyBDgEOgQ4-] = [Черновики]
+[&BBoEPgRABDcEOAQ9BDA-] = [Корзина]      -> [&BCMENAQwBDsENQQ9BD0ESwQ1-] = [Удаленные]
+
+Folders mapping from --f1f2 options, it overrides --automap:
+[Ð§ÐµÑÐ½Ð¾Ð²Ð¸ÐºÐ¸]                     -> [Drafts]                                 BUT Ð§ÐµÑÐ½Ð¾Ð²Ð¸ÐºÐ¸ does NOT exist on host1!
+[ÐÐ¾ÑÐ·Ð¸Ð½Ð°]                         -> [Deleted Items]                          BUT ÐÐ¾ÑÐ·Ð¸Ð½Ð° does NOT exist on host1!
+[ÐÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð½ÑÐµ]               -> [Sent Items]                             BUT ÐÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð½ÑÐµ does NOT exist on host1!
+
+Checking SEARCH ALL works on both accounts. To avoid that check, use --nochecknoabletosearch
+Host1: checking if SEARCH ALL works on INBOX
+Host1: folder [INBOX] has 10 messages mentioned by SELECT
+Host1: folder [INBOX] has 10 messages found by SEARCH ALL
+Host1: folder [INBOX] has the same messages count (10) by SELECT and SEARCH ALL
+Host2: checking if SEARCH ALL works on INBOX
+Host2: folder [INBOX] has 10 messages mentioned by SELECT
+Host2: folder [INBOX] has 10 messages found by SEARCH ALL
+Host2: folder [INBOX] has the same messages count (10) by SELECT and SEARCH ALL
+Good! SEARCH ALL works on both accounts.
+++++ Looping on each one of 5 folders to sync
+Folder     1/5 [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] = [Отправленные] -> [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] = [Отправленные]
+Host1: folder [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] has 1 messages in total (mentioned by SELECT)
+Host2: folder [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] has 1 messages in total (mentioned by SELECT)
+Host2: folder [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] permanentflags: \Seen \Answered \Flagged \Deleted \Draft $MDNSent
+Host1: folder [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] considering 1 messages
+Host2: folder [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] considering 1 messages
+Local cache directory: /data/imapsync-cache/project_1/mailbox_1/imapsync_cache/imap.example-src.com/user@example.com/mail.example-dst.local/user@example.com/_BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-/_BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1- ( 186 characters long )
+CACHE h1 h2: 1 files
+Host1: folder [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] selected 1 messages, duplicates 0
+Host2: folder [&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-] selected 1 messages, duplicates 0
+Folder     2/5 [&BBoEPgRABDcEOAQ9BDA-] = [Корзина] -> [&BCMENAQwBDsENQQ9BD0ESwQ1-] = [Удаленные]
+Host1: folder [&BBoEPgRABDcEOAQ9BDA-] has 0 messages in total (mentioned by SELECT)
+Host2: folder [&BCMENAQwBDsENQQ9BD0ESwQ1-] has 0 messages in total (mentioned by SELECT)
+Host2: folder [&BCMENAQwBDsENQQ9BD0ESwQ1-] permanentflags: \Seen \Answered \Flagged \Deleted \Draft $MDNSent
+Host1: folder [&BBoEPgRABDcEOAQ9BDA-] considering 0 messages
+Host2: folder [&BCMENAQwBDsENQQ9BD0ESwQ1-] considering 0 messages
+Local cache directory: /data/imapsync-cache/project_1/mailbox_1/imapsync_cache/imap.example-src.com/user@example.com/mail.example-dst.local/user@example.com/_BBoEPgRABDcEOAQ9BDA-/_BCMENAQwBDsENQQ9BD0ESwQ1- ( 165 characters long )
+CACHE h1 h2: 0 files
+Host1: folder [&BBoEPgRABDcEOAQ9BDA-] selected 0 messages, duplicates 0
+Host2: folder [&BCMENAQwBDsENQQ9BD0ESwQ1-] selected 0 messages, duplicates 0
+Folder     3/5 [&BCEEPwQwBDw-] = [Спам]            -> [&BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA-] = [Нежелательная почта]
+Host1: folder [&BCEEPwQwBDw-] has 1 messages in total (mentioned by SELECT)
+Host2: folder [&BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA-] has 1 messages in total (mentioned by SELECT)
+Host2: folder [&BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA-] permanentflags: \Seen \Answered \Flagged \Deleted \Draft $MDNSent
+Host1: folder [&BCEEPwQwBDw-] considering 1 messages
+Host2: folder [&BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA-] considering 1 messages
+Local cache directory: /data/imapsync-cache/project_1/mailbox_1/imapsync_cache/imap.example-src.com/user@example.com/mail.example-dst.local/user@example.com/_BCEEPwQwBDw-/_BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8-__BD8EPgRHBEIEMA- ( 185 characters long )
+CACHE h1 h2: 1 files
+Host1: folder [&BCEEPwQwBDw-] selected 1 messages, duplicates 0
+Host2: folder [&BB0ENQQ2BDUEOwQwBEIENQQ7BEwEPQQwBE8- &BD8EPgRHBEIEMA-] selected 1 messages, duplicates 0
+Folder     4/5 [&BCcENQRABD0EPgQyBDgEOgQ4-] = [Черновики] -> [&BCcENQRABD0EPgQyBDgEOgQ4-] = [Черновики]
+Host1: folder [&BCcENQRABD0EPgQyBDgEOgQ4-] has 0 messages in total (mentioned by SELECT)
+Host2: folder [&BCcENQRABD0EPgQyBDgEOgQ4-] has 0 messages in total (mentioned by SELECT)
+Host2: folder [&BCcENQRABD0EPgQyBDgEOgQ4-] permanentflags: \Seen \Answered \Flagged \Deleted \Draft $MDNSent
+Host1: folder [&BCcENQRABD0EPgQyBDgEOgQ4-] considering 0 messages
+Host2: folder [&BCcENQRABD0EPgQyBDgEOgQ4-] considering 0 messages
+Local cache directory: /data/imapsync-cache/project_1/mailbox_1/imapsync_cache/imap.example-src.com/user@example.com/mail.example-dst.local/user@example.com/_BCcENQRABD0EPgQyBDgEOgQ4-/_BCcENQRABD0EPgQyBDgEOgQ4- ( 170 characters long )
+CACHE h1 h2: 0 files
+Host1: folder [&BCcENQRABD0EPgQyBDgEOgQ4-] selected 0 messages, duplicates 0
+Host2: folder [&BCcENQRABD0EPgQyBDgEOgQ4-] selected 0 messages, duplicates 0
+Folder     5/5 [INBOX]                             -> [INBOX]                            
+Host1: folder [INBOX] has 10 messages in total (mentioned by SELECT)
+Host2: folder [INBOX] has 10 messages in total (mentioned by SELECT)
+Host2: folder [INBOX] permanentflags: \Seen \Answered \Flagged \Deleted \Draft $MDNSent
+Host1: folder [INBOX] considering 10 messages
+Host2: folder [INBOX] considering 10 messages
+Local cache directory: /data/imapsync-cache/project_1/mailbox_1/imapsync_cache/imap.example-src.com/user@example.com/mail.example-dst.local/user@example.com/INBOX/INBOX ( 128 characters long )
+CACHE h1 h2: 10 files
+Host1: folder [INBOX] selected 10 messages, duplicates 0
+Host2: folder [INBOX] selected 10 messages, duplicates 0
+++++ End looping on each folder
+++++ Statistics
+Transfer started on                     : Thursday 30 July 2026-07-30 05:04:37 +0300 MSK
+Transfer ended on                       : Thursday 30 July 2026-07-30 05:04:51 +0300 MSK
+Transfer time                           : 14.4 sec
+Folders synced                          : 5/5 synced
+Folders deleted on host2                : 0 
+Messages transferred                    : 0 
+Messages skipped                        : 12
+Messages found duplicate on host1       : 0
+Messages found duplicate on host2       : 0
+Messages found crossduplicate on host2  : 0
+Messages void (noheader) on host1       : 0  
+Messages void (noheader) on host2       : 0
+Messages found in host1 not in host2    : 0 messages
+Messages found in host2 not in host1    : 0 messages
+Messages deleted on host1               : 0
+Messages deleted on host2               : 0
+Total bytes transferred                 : 0 (0.000 KiB)
+Total bytes skipped                     : 341977 (333.962 KiB)
+Message rate                            : 0.0 messages/s
+Average bandwidth rate                  : 0.0 KiB/s
+Reconnections to host1                  : 0
+Reconnections to host2                  : 0
+Memory consumption at the end           : 174.7 MiB (*time 0.7 MiB*h) (started with 163.2 MiB)
+Load end is                             : 0.15 0.05 0.01 2/308 on 2 cores
+CPU time and %cpu                       : 0.77 sec 5.3 %cpu 2.6 %allcpus
+Biggest message transferred             : 0 bytes (0.000 KiB)
+Memory/biggest message ratio            : NA
+The sync is strict, all 0 identified messages in host2 are on host1.
+Detected 0 errors
+Check if a new imapsync release is available by adding --releasecheck
+Homepage: https://imapsync.lamiral.info/
+Exiting with return value 0 (EX_OK: successful termination) 0/50 nb_errors/max_errors PID 20
+Removing pidfile /data/imapsync-cache/project_1/mailbox_1/imapsync.pid
+No log file because of option --nolog

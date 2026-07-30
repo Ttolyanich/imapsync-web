@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import func
 
+from app.imap_probe import encode_folder_name
 from app.models import Endpoint, FolderMapping, Mailbox, MailboxFolder, Project
 from app.presets import detect_role, get_preset, load_folder_dictionary
 
@@ -203,10 +204,21 @@ def is_confirmed(session, project_id: int) -> bool:
 def effective_plan(session, mailbox_id: int, project: Project, dst_endpoint: Endpoint):
     """Что именно передавать imapsync по конкретному ящику.
 
-    Подтверждённая человеком таблица главнее любых догадок. Папки, которых
-    в ней нет (появились у одного ящика позже), обрабатываются той же
-    автоматикой, что и при построении предложения, — молча пропускать их
-    было бы хуже, чем перенести как есть.
+    Два правила, оба выведены из боевого лога 30.07.2026.
+
+    **Имена — в протокольном виде.** imapsync прямо пишет в своём выводе, что
+    в параметрах командной строки нужно указывать имя папки так, как оно
+    выглядит в IMAP (modified UTF-7). Читаемое «Спам» доезжает искажённым и
+    не совпадает ни с чем — в логе это выглядело как «does NOT exist on host1».
+
+    **Автоматику соответствий не навязываем.** У imapsync есть `--automap`,
+    который сопоставляет системные папки по флагам SPECIAL-USE с обеих сторон,
+    и делает это правильнее нашей догадки по пресету: на живом сервере
+    приёмник оказался русифицированным (`Отправленные`, `Удаленные`), а пресет
+    предполагал английские `Sent Items`. Наши пары перекрыли бы верное
+    сопоставление и создали на приёмнике вторые папки-дубли — ровно то, ради
+    предотвращения чего всё и затевалось. Поэтому пару отдаём только тогда,
+    когда человек подтвердил её руками; в остальном полагаемся на `--automap`.
     """
     dst_preset = get_preset(dst_endpoint.preset) if dst_endpoint else None
     dictionary = load_folder_dictionary()
@@ -229,23 +241,24 @@ def effective_plan(session, mailbox_id: int, project: Project, dst_endpoint: End
 
     for folder in folders:
         name = folder.name_display
+        # На проводе имя выглядит иначе; именно его понимает imapsync.
+        raw = folder.name_raw or encode_folder_name(name)
 
         if not folder.selectable:
-            excludes.append(name)
+            excludes.append(raw)
             continue
 
         decision = confirmed.get(name)
         if decision is not None:
             if decision.action == ACTION_SKIP:
-                excludes.append(name)
+                excludes.append(raw)
             elif decision.dst_name and decision.dst_name != name:
-                mapping[name] = decision.dst_name
+                mapping[raw] = encode_folder_name(decision.dst_name)
             continue
 
         row = _propose(name, folder.special_use, dst_preset, dictionary, project)
         if row.action == ACTION_SKIP:
-            excludes.append(name)
-        elif row.dst_name and row.dst_name != name:
-            mapping[name] = row.dst_name
+            excludes.append(raw)
+        # Пары по догадке не отдаём — с ними лучше справится --automap.
 
     return mapping, tuple(excludes)

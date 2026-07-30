@@ -210,6 +210,40 @@ check("обычный прогон не считается пустым", normal
 delta = RunResult(exit_code=0, copied_messages=0, recognised_lines=7)
 check("дельта без новых писем не считается пустой", delta.did_nothing, False)
 
+print("\n--- боевой лог: дельта-прогон, копировать нечего ---")
+# Настоящий лог с сервера 30.07.2026: ящик уже перенесён, на приёмнике те же
+# письма. imapsync честно отработал и напечатал сводку. Это НЕ поломка, и
+# панель не должна показывать ошибку.
+delta_run = ImapsyncRun(spec)
+for line in (_Path(__file__).parent / "fixtures" / "delta_run.log").read_text(
+    encoding="utf-8"
+).splitlines():
+    delta_run._consume(line)
+delta_run.result.exit_code = 0
+res = delta_run.result
+
+check("сводка найдена", res.summary_seen, True)
+check("перенесено писем", res.copied_messages, 0)
+check("уже было на приёмнике", res.skipped_messages, 12)
+check("папок обработано", (res.folders_synced, res.folders_total), (5, 5))
+check("ошибок нет", res.reported_errors, 0)
+check("строки о папках распознаны", res.recognised_lines > 0, True)
+check("ложной тревоги нет", res.did_nothing, False)
+check("режим CGI не включался", res.cgi_context, False)
+print(f"       сводка для человека: {res.summary}")
+
+print("\n--- имена папок для командной строки ---")
+from app.imap_probe import encode_folder_name  # noqa: E402
+
+# imapsync в своём выводе пишет: «X is the imap foldername you have to use in
+# command line options». Читаемое имя доезжает искажённым.
+check("Спам", encode_folder_name("Спам"), "&BCEEPwQwBDw-")
+check("Отправленные", encode_folder_name("Отправленные"),
+      "&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-")
+check("Черновики", encode_folder_name("Черновики"), "&BCcENQRABD0EPgQyBDgEOgQ4-")
+check("ASCII не трогаем", encode_folder_name("INBOX"), "INBOX")
+check("ASCII с пробелом не трогаем", encode_folder_name("Sent Items"), "Sent Items")
+
 print("\n--- коды возврата ---")
 from app.imapsync_runner import FATAL_EXITS, RETRIABLE_EXITS  # noqa: E402
 

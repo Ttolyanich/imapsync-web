@@ -404,10 +404,8 @@ class MigrationRunner:
                 mailbox.log_filename = result.log_path.name
 
             if status == MB_DONE:
-                message = (
-                    f"{mailbox.src_email}: перенесено {result.copied_messages} писем "
-                    f"за этот прогон"
-                )
+                # Цифры берём из итоговой сводки imapsync, а не из подсчёта строк.
+                message = f"{mailbox.src_email}: {result.summary}"
                 level = "info"
                 code = "migrate_done"
             elif status == MB_QUEUED:
