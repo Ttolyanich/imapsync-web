@@ -235,7 +235,7 @@ class MigrationRunner:
                 mailbox.status = MB_QUEUED
                 selected.append(mailbox.id)
 
-            parallel = max(1, min(project.max_parallel, src.max_parallel, dst.max_parallel))
+            parallel = max(1, project.max_parallel)
             project.status = PROJECT_RUNNING
             project.last_activity_at = datetime.now(timezone.utc)
 
