@@ -318,9 +318,7 @@
              {{ 'disabled' if not can_edit }}>
     </label>
     <p class="small muted">
-      Действует минимум из трёх значений: проекта и обоих серверов.
-      {% if src %}«{{ src.name }}» — {{ src.max_parallel }}{% endif %}{% if dst %},
-      «{{ dst.name }}» — {{ dst.max_parallel }}{% endif %}.
+      Количество одновременных потоков переноса (лимиты подключаемых серверов автоматически адаптируются при сохранении).
     </p>
 
     <label>

@@ -588,7 +588,16 @@ def save_settings(project_id: int):
         if not can_edit_project(project):
             abort(403)
         try:
-            project.max_parallel = max(1, int(request.form.get("max_parallel") or 3))
+            val = max(1, int(request.form.get("max_parallel") or 3))
+            project.max_parallel = val
+            if project.src_endpoint_id:
+                src = db.get(Endpoint, project.src_endpoint_id)
+                if src and src.max_parallel < val:
+                    src.max_parallel = val
+            if project.dst_endpoint_id:
+                dst = db.get(Endpoint, project.dst_endpoint_id)
+                if dst and dst.max_parallel < val:
+                    dst.max_parallel = val
         except ValueError:
             flash("Параллельность должна быть числом.", "error")
             return redirect(url_for("projects.view", project_id=project_id, tab="settings"))
