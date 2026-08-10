@@ -464,6 +464,7 @@ class MigrationRunner:
                 max_message_bytes=(project.max_message_size_mb or 0) * 1024 * 1024 or None,
                 dry_run=self.dry_run,
                 use_cache=bool(project.use_cache),
+                preset_args=_preset_args(src, dst),
             )
             self._baselines[mailbox_id] = (mailbox.done_messages, mailbox.done_bytes)
             totals = (
@@ -755,6 +756,24 @@ def _noop_note(result) -> str:
         "ни о переносе, ни об обработке папок. Проверь подробный лог прогона: "
         "возможно, все папки попали в исключения"
     )
+
+
+def _preset_args(src: Endpoint, dst: Endpoint) -> tuple[str, ...]:
+    """Вендорные флаги из пресетов обоих серверов.
+
+    Это и есть смысл каталога пресетов: то, что нужно конкретному серверу,
+    описывается данными, а не растёт условиями в коде. Например, локальный
+    Exchange рвёт соединение на письмах с очень длинными строками, и лечится
+    это флагом imapsync, а не правкой Python.
+    """
+    from app.presets import get_preset
+
+    args: list[str] = []
+    for endpoint in (src, dst):
+        preset = get_preset(endpoint.preset) if endpoint else None
+        if preset:
+            args.extend(preset.imapsync_args)
+    return tuple(args)
 
 
 def _has_credentials(mailbox: Mailbox, src: Endpoint, dst: Endpoint) -> bool:

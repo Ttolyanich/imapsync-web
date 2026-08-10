@@ -155,6 +155,35 @@ with tempfile.TemporaryDirectory() as tmp:
     p2 = _Path(tmp) / "p2"; p2.write_text("x")
     cached_cmd = ImapsyncRun(spec_cached)._build_command(p1, p2)
 check("включённый кэш попадает в команду", "--usecache" in cached_cmd, True)
+
+print("\n--- вендорные флаги из пресетов ---")
+# Механизм imapsync_args был объявлен в схеме пресетов, но никуда не
+# передавался. Проверяем, что флаги реально доезжают до команды.
+exchange_args = load_presets()["exchange-onprem"].imapsync_args
+check("в пресете Exchange есть разбивка длинных строк",
+      "--regexmess" in exchange_args, True)
+check("порог указан", "--maxlinelength" in exchange_args, True)
+check("уведомления о прочтении обезврежены",
+      "--disarmreadreceipts" in exchange_args, True)
+check("пресет не навязывает лимит размера письма",
+      "--maxsize" in exchange_args, False)
+
+spec_preset = RunSpec(
+    mailbox_id=7, project_id=3, src=spec.src, dst=spec.dst,
+    preset_args=exchange_args, max_message_bytes=30_000_000,
+)
+with tempfile.TemporaryDirectory() as tmp:
+    p1 = _Path(tmp) / "p1"; p1.write_text("x")
+    p2 = _Path(tmp) / "p2"; p2.write_text("x")
+    preset_cmd = ImapsyncRun(spec_preset)._build_command(p1, p2)
+
+check("флаги пресета попали в команду", "--regexmess" in preset_cmd, True)
+check("регулярка доехала без искажений",
+      r"s,(.{9900}),$1\r\n,g" in preset_cmd, True)
+# Настройка проекта должна побеждать вендорный умолчательный флаг.
+check("лимит размера от проекта на месте", "30000000" in preset_cmd, True)
+check("флаги пресета идут раньше настроек проекта",
+      preset_cmd.index("--regexmess") < preset_cmd.index("--maxsize"), True)
 check("свой лог, без LOG_imapsync", "--nolog" in cmd, True)
 check("автомаппинг папок", "--automap" in cmd, True)
 check("явная пара папок", "Отправленные=Sent Items" in cmd, True)

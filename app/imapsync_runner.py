@@ -303,6 +303,8 @@ class RunSpec:
     dry_run: bool = False
     # Кэш выключен по умолчанию — как и у самого imapsync.
     use_cache: bool = False
+    # Флаги из пресетов серверов: то, что нужно конкретному вендору.
+    preset_args: tuple[str, ...] = ()
 
 
 @dataclass
@@ -675,6 +677,11 @@ class ImapsyncRun:
 
         command += _security_flags(spec.src, "1")
         command += _security_flags(spec.dst, "2")
+
+        # Флаги пресетов идут раньше настроек проекта: если один и тот же
+        # параметр задан дважды, побеждает выбор человека, а не вендорный
+        # умолчательный.
+        command += list(spec.preset_args)
 
         for src_name, dst_name in spec.folder_map.items():
             if src_name and dst_name and src_name != dst_name:
