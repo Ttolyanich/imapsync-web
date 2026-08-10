@@ -484,6 +484,10 @@ class MigrationRunner:
             if started:
                 mailbox.started_at = datetime.now(timezone.utc)
                 mailbox.run_attempts += 1
+                # Ошибка прошлого прогона больше не актуальна: иначе рядом со
+                # статусом «идёт» висит отказ, которого сейчас уже нет.
+                mailbox.last_error = None
+                mailbox.last_exit_code = None
 
     def _store(self, mailbox_id: int, result, *, status: str, note: str | None = None) -> None:
         with session_scope() as session:
