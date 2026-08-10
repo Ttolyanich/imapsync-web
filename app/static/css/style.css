@@ -876,12 +876,45 @@ dialog.modal-dialog::backdrop {
   padding: var(--space-5);
 }
 
-/* Folder Types Icons */
+/* Folder Types Icons & Interactive Folder Tree */
 .folder-badge-icon {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-weight: 500;
+}
+
+.folder-parent-cell {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.folder-parent-cell:hover {
+  color: var(--accent);
+}
+
+.folder-parent-cell:hover .folder-badge-icon b {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.folder-arrow-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.folder-arrow-icon.collapsed {
+  transform: rotate(-90deg);
 }
 
 button.primary, .button.primary {

@@ -28,25 +28,23 @@
         {% set live = r.live %}
         <tr class="{{ 'warn' if not r.selectable }}"
             {% if r.parent_name %}data-parent-name="{{ r.parent_name }}"{% endif %}>
-          <td style="padding-left: calc(12px + {{ r.depth or 0 }} * 18px)">
+          <td {% if r.has_children %}class="folder-parent-cell" data-folder-target="{{ r.name }}" data-collapsed="false" onclick="
+                var td = this;
+                var target = td.getAttribute('data-folder-target');
+                var collapsed = td.getAttribute('data-collapsed') === 'true';
+                td.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
+                var arrow = td.querySelector('.folder-arrow-icon');
+                if (arrow) arrow.classList.toggle('collapsed', !collapsed);
+                var tbody = td.closest('tbody');
+                tbody.querySelectorAll('tr').forEach(function(row) {
+                  var p = row.getAttribute('data-parent-name');
+                  if (p && (p === target || p.startsWith(target + '/'))) {
+                    row.style.display = collapsed ? '' : 'none';
+                  }
+                });
+              "{% endif %} style="padding-left: calc(12px + {{ r.depth or 0 }} * 18px)">
             {% if r.has_children %}
-              <button type="button" class="button-sm link"
-                      style="min-height:0;padding:0 4px;margin-right:4px;color:var(--accent);font-size:12px;cursor:pointer"
-                      data-folder-target="{{ r.name }}" data-collapsed="false"
-                      onclick="
-                        var btn = this;
-                        var target = btn.getAttribute('data-folder-target');
-                        var collapsed = btn.getAttribute('data-collapsed') === 'true';
-                        btn.setAttribute('data-collapsed', collapsed ? 'false' : 'true');
-                        btn.textContent = collapsed ? '▾' : '▸';
-                        var tbody = btn.closest('tbody');
-                        tbody.querySelectorAll('tr').forEach(function(row) {
-                          var p = row.getAttribute('data-parent-name');
-                          if (p && (p === target || p.startsWith(target + '/'))) {
-                            row.style.display = collapsed ? '' : 'none';
-                          }
-                        });
-                      ">▾</button>
+              <span class="folder-arrow-icon">▾</span>
             {% endif %}
             <span class="folder-badge-icon">
               {% if r.special_use == '\Sent' or r.name.lower() in ('sent', 'отправленные') %}📤
