@@ -28,7 +28,15 @@
         {% set live = r.live %}
         <tr class="{{ 'warn' if not r.selectable }}">
           <td>
-            {{ r.name }}
+            <span class="folder-badge-icon">
+              {% if r.special_use == '\Sent' or r.name.lower() in ('sent', 'отправленные') %}📤
+              {% elif r.special_use == '\Junk' or r.name.lower() in ('junk', 'спам', 'spam') %}🚫
+              {% elif r.special_use == '\Trash' or r.name.lower() in ('trash', 'корзина') %}🗑️
+              {% elif r.special_use == '\Drafts' or r.name.lower() in ('drafts', 'черновики') %}📝
+              {% elif r.special_use == '\Archive' or r.name.lower() in ('archive', 'архив') %}📦
+              {% else %}📂{% endif %}
+              <b>{{ r.name }}</b>
+            </span>
             {% if r.special_use %}<span class="badge" style="margin-left:6px">{{ r.special_use }}</span>{% endif %}
             {% if live and live.active %}
               <span class="badge ok" style="margin-left:6px"><span class="badge-dot"></span>сейчас</span>

@@ -43,12 +43,27 @@
   </div>
 </div>
 
-<div class="stat-row card" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:var(--space-4)">
-  <div><b>{{ counts.total }}</b><span class="muted">ящиков</span></div>
-  <div><b style="color:var(--ok)">{{ counts.ok }}</b><span class="muted">доступны</span></div>
-  <div><b style="color:{{ 'var(--err)' if counts.failed else 'var(--ink)' }}">{{ counts.failed }}</b><span class="muted">с ошибкой</span></div>
-  <div><b>{{ counts.messages | human_count }}</b><span class="muted">писем</span></div>
-  <div><b>{{ counts.size | human_size }}</b><span class="muted">объём</span></div>
+<div class="metrics-grid">
+  <div class="metric-card-glass">
+    <div class="metric-num">{{ counts.total }}</div>
+    <div class="metric-label">Всего ящиков</div>
+  </div>
+  <div class="metric-card-glass">
+    <div class="metric-num" style="color:var(--ok)">{{ counts.ok }}</div>
+    <div class="metric-label">Доступ подтверждён</div>
+  </div>
+  <div class="metric-card-glass">
+    <div class="metric-num" style="color:{{ 'var(--err)' if counts.failed else 'var(--ink)' }}">{{ counts.failed }}</div>
+    <div class="metric-label">С ошибкой доступа</div>
+  </div>
+  <div class="metric-card-glass">
+    <div class="metric-num">{{ counts.messages | human_count }}</div>
+    <div class="metric-label">Писем в источнике</div>
+  </div>
+  <div class="metric-card-glass">
+    <div class="metric-num">{{ counts.size | human_size }}</div>
+    <div class="metric-label">Суммарный объём</div>
+  </div>
 </div>
 
 {# Разметку тянем один раз и потом ещё только тогда, когда меняется состояние
@@ -72,17 +87,32 @@
   Переносятся <b>письма и структура папок</b>. Календари, контакты, задачи, правила обработки почты и автоответы протокол IMAP не переносит — их переносят отдельно.
 </div>
 
-<div class="tabs">
+<div class="pill-tabs">
   <a href="{{ url_for('projects.view', project_id=project.id, tab='mailboxes') }}"
-     class="{{ 'active' if tab == 'mailboxes' }}">Ящики</a>
+     class="pill-tab {{ 'active' if tab == 'mailboxes' }}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+    Ящики
+  </a>
   <a href="{{ url_for('projects.folders', project_id=project.id) }}"
-     class="{{ 'active' if tab == 'folders' }}">Папки</a>
+     class="pill-tab {{ 'active' if tab == 'folders' }}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+    Папки
+  </a>
   <a href="{{ url_for('projects.view', project_id=project.id, tab='log') }}"
-     class="{{ 'active' if tab == 'log' }}">Лог</a>
+     class="pill-tab {{ 'active' if tab == 'log' }}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+    Логи
+  </a>
   <a href="{{ url_for('projects.view', project_id=project.id, tab='report') }}"
-     class="{{ 'active' if tab == 'report' }}">Отчёт</a>
+     class="pill-tab {{ 'active' if tab == 'report' }}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+    Отчёт
+  </a>
   <a href="{{ url_for('projects.view', project_id=project.id, tab='settings') }}"
-     class="{{ 'active' if tab == 'settings' }}">Настройки</a>
+     class="pill-tab {{ 'active' if tab == 'settings' }}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    Настройки
+  </a>
 </div>
 
 {% if tab == 'mailboxes' %}

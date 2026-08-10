@@ -532,19 +532,72 @@ input:disabled, select:disabled, textarea:disabled {
   opacity: 0.7;
 }
 
+/* Custom Toggle Switch Component (Replaces default checkboxes everywhere) */
 label:has(> input[type=checkbox]) {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
   color: var(--ink);
   line-height: 1.45;
   cursor: pointer;
   margin-bottom: var(--space-2);
+  user-select: none;
+  font-weight: 500;
 }
 
-input[type=checkbox], input[type=radio] {
-  width: 17px;
-  height: 17px;
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 40px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  background-color: var(--line-strong);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  border: 1px solid var(--line-strong);
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+  flex: 0 0 40px !important;
+  margin: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+input[type="checkbox"]:checked::before {
+  transform: translateX(18px);
+  background-color: #ffffff;
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--accent);
+}
+
+input[type="checkbox"]:focus-visible {
+  box-shadow: var(--ring);
+}
+
+input[type="radio"] {
+  width: 18px;
+  height: 18px;
   min-height: 0;
   margin: 2px 0 0;
   accent-color: var(--accent);
@@ -681,17 +734,103 @@ button.button-sm, .button.button-sm {
   margin: 0;
 }
 
+/* Pill-Tabs Navigation */
+.pill-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel-subtle);
+  padding: 4px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.pill-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none !important;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.pill-tab:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pill-tab.active {
+  background: var(--panel);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
+}
+
+/* Glassmorphism Metric Cards */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.metric-card-glass {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card-glass:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+  border-color: var(--line-strong);
+}
+
+.metric-card-glass .metric-num {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
+}
+
+.metric-card-glass .metric-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Modal Dialog Glass Backdrop */
 dialog.modal-dialog {
   border: none;
   background: transparent;
   padding: 0;
-  max-width: 440px;
+  max-width: 460px;
   width: 90%;
   margin: auto;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-lift);
 }
 dialog.modal-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
 }
 .modal-card {
   background: var(--panel);
@@ -699,6 +838,14 @@ dialog.modal-dialog::backdrop {
   border-radius: var(--radius);
   box-shadow: var(--shadow-lift);
   padding: var(--space-5);
+}
+
+/* Folder Types Icons */
+.folder-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
 }
 
 button.primary, .button.primary {
