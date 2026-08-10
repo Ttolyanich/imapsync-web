@@ -3,11 +3,25 @@
 from __future__ import annotations
 
 import logging
+import os
+import subprocess
 from datetime import datetime, timedelta, timezone
 
 from flask import Flask, render_template
 
-__version__ = "0.1.0"
+
+def _get_version() -> str:
+    version = os.environ.get("APP_VERSION", "0.2.0")
+    try:
+        commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+        if commit:
+            return f"v{version} ({commit})"
+    except Exception:
+        pass
+    return f"v{version}"
+
+
+__version__ = _get_version()
 
 
 def create_app() -> Flask:
