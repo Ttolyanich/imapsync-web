@@ -27,8 +27,8 @@
         {% for r in rows %}
         {% set live = r.live %}
         <tr class="{{ 'warn' if not r.selectable }}"
-            {% if r.parent_name %}data-parent-name="{{ r.parent_name }}"{% endif %}>
-          <td {% if r.has_children %}class="folder-parent-cell" data-folder-target="{{ r.name }}" data-collapsed="false" onclick="
+            {% if r.parent_name %}data-parent-name="{{ r.parent_name }}" style="display:none"{% endif %}>
+          <td {% if r.has_children %}class="folder-parent-cell" data-folder-target="{{ r.name }}" data-collapsed="true" onclick="
                 var td = this;
                 var target = td.getAttribute('data-folder-target');
                 var collapsed = td.getAttribute('data-collapsed') === 'true';
@@ -44,7 +44,7 @@
                 });
               "{% endif %} style="padding-left: calc(12px + {{ r.depth or 0 }} * 18px)">
             {% if r.has_children %}
-              <span class="folder-arrow-icon">▾</span>
+              <span class="folder-arrow-icon collapsed">▾</span>
             {% endif %}
             <span class="folder-badge-icon">
               {% if r.special_use == '\Sent' or r.name.lower() in ('sent', 'отправленные') %}📤
