@@ -428,18 +428,14 @@
       предотвращает, письма сопоставляются по заголовкам.
     </p>
 
-    <form method="post" action="{{ url_for('projects.save_settings', project_id=project.id) }}">
+    <form method="post" action="{{ url_for('projects.save_settings', project_id=project.id) }}"
+          hx-post="{{ url_for('projects.save_settings', project_id=project.id) }}"
+          hx-target="#tab-content" hx-select="#tab-content" hx-swap="outerHTML">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="use_cache_form" value="1">
-      <input type="hidden" name="max_parallel" value="{{ project.max_parallel }}">
-      <input type="hidden" name="unknown_folder_policy" value="{{ project.unknown_folder_policy }}">
-      <input type="hidden" name="unknown_folder_container" value="{{ project.unknown_folder_container }}">
-      <input type="hidden" name="max_message_size_mb" value="{{ project.max_message_size_mb }}">
-      {% if project.migrate_trash %}<input type="hidden" name="migrate_trash" value="on">{% endif %}
-      {% if project.migrate_spam %}<input type="hidden" name="migrate_spam" value="on">{% endif %}
       <label>
         <input type="checkbox" name="use_cache" {{ 'checked' if project.use_cache }}
-               {{ 'disabled' if not can_edit }} onchange="this.form.submit()">
+               {{ 'disabled' if not can_edit }} onchange="htmx.trigger(this.form, 'submit')">
         Использовать кэш для ускорения повторных прогонов
         <span class="muted small">— включайте, только если следите за свободными inode-ами</span>
       </label>

@@ -604,41 +604,47 @@ def save_settings(project_id: int):
         project = _get(db, project_id)
         if not can_edit_project(project):
             abort(403)
-        try:
-            val = max(1, int(request.form.get("max_parallel") or 3))
-            project.max_parallel = val
-            if project.src_endpoint_id:
-                src = db.get(Endpoint, project.src_endpoint_id)
-                if src and src.max_parallel < val:
-                    src.max_parallel = val
-            if project.dst_endpoint_id:
-                dst = db.get(Endpoint, project.dst_endpoint_id)
-                if dst and dst.max_parallel < val:
-                    dst.max_parallel = val
-        except ValueError:
-            flash("Параллельность должна быть числом.", "error")
-            return redirect(url_for("projects.view", project_id=project_id, tab="settings"))
 
-        project.migrate_trash = bool(request.form.get("migrate_trash"))
-        project.migrate_spam = bool(request.form.get("migrate_spam"))
-        # Галка кэша живёт в отдельной форме. Без этой проверки сохранение
-        # остальных настроек молча выключало бы кэш, потому что в той форме
-        # поля нет вовсе.
         if request.form.get("use_cache_form"):
             project.use_cache = bool(request.form.get("use_cache"))
-        project.unknown_folder_policy = request.form.get("unknown_folder_policy") or "create"
-        project.unknown_folder_container = (
-            request.form.get("unknown_folder_container") or ""
-        ).strip() or None
-        try:
-            project.max_message_size_mb = max(0, int(request.form.get("max_message_size_mb") or 0))
-        except ValueError:
-            project.max_message_size_mb = 0
+        else:
+            try:
+                val = max(1, int(request.form.get("max_parallel") or 3))
+                project.max_parallel = val
+                if project.src_endpoint_id:
+                    src = db.get(Endpoint, project.src_endpoint_id)
+                    if src and src.max_parallel < val:
+                        src.max_parallel = val
+                if project.dst_endpoint_id:
+                    dst = db.get(Endpoint, project.dst_endpoint_id)
+                    if dst and dst.max_parallel < val:
+                        dst.max_parallel = val
+            except ValueError:
+                flash("Параллельность должна быть числом.", "error")
+                return redirect(url_for("projects.view", project_id=project_id, tab="settings"))
+
+            project.migrate_trash = bool(request.form.get("migrate_trash"))
+            project.migrate_spam = bool(request.form.get("migrate_spam"))
+            project.unknown_folder_policy = request.form.get("unknown_folder_policy") or "create"
+            project.unknown_folder_container = (
+                request.form.get("unknown_folder_container") or ""
+            ).strip() or None
+            try:
+                project.max_message_size_mb = max(0, int(request.form.get("max_message_size_mb") or 0))
+            except ValueError:
+                project.max_message_size_mb = 0
+
         project.last_activity_at = datetime.now(timezone.utc)
         log_action(db, user=current_user(), action="project_settings_changed",
                    target_type="project", target_id=project_id)
+        context = _project_context(db, project)
+        folder_rows = build_proposal(db, project)
+        folders_confirmed = is_confirmed(db, project_id)
 
     flash("Настройки сохранены.", "ok")
+    if request.headers.get("HX-Request"):
+        return render_template("project.html", tab="settings", folder_rows=folder_rows, folders_confirmed=folders_confirmed, **context)
+
     return redirect(url_for("projects.view", project_id=project_id, tab="settings"))
 
 
