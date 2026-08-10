@@ -963,6 +963,7 @@ def _project_context(db, project: Project) -> dict:
             "max_parallel": project.max_parallel,
             "migrate_trash": project.migrate_trash,
             "migrate_spam": project.migrate_spam,
+            "use_cache": project.use_cache,
             "unknown_folder_policy": project.unknown_folder_policy,
             "unknown_folder_container": project.unknown_folder_container or "",
             "max_message_size_mb": project.max_message_size_mb,
