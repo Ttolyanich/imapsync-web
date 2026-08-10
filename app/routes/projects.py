@@ -402,6 +402,7 @@ def mailbox_folders(project_id: int, mailbox_id: int):
         migrate_spam = project.migrate_spam
         migrate_trash = project.migrate_trash
 
+        all_names = {f.name_display for f in src_folders}
         inventory = []
         for f in src_folders:
             reason = None
@@ -412,8 +413,18 @@ def mailbox_folders(project_id: int, mailbox_id: int):
             elif is_trash and not migrate_trash:
                 reason = "пропускается (корзина отключена в настройках проекта)"
 
+            parts = f.name_display.replace(".", "/").split("/")
+            depth = len(parts) - 1
+            leaf_name = parts[-1] if parts else f.name_display
+            parent_name = "/".join(parts[:-1]) if depth > 0 else None
+            has_children = any(n != f.name_display and (n.startswith(f.name_display + "/") or n.startswith(f.name_display + ".")) for n in all_names)
+
             inventory.append({
                 "name": f.name_display,
+                "leaf_name": leaf_name,
+                "depth": depth,
+                "parent_name": parent_name,
+                "has_children": has_children,
                 "raw": f.name_raw,
                 "messages": f.messages,
                 "size_bytes": f.size_bytes,
