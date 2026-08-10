@@ -24,6 +24,10 @@
       <a class="button {{ 'primary' if only_failed }}"
          hx-get="{{ url_for('projects.mailboxes_partial', project_id=project_id, failed=1, q=q) }}"
          hx-target="#mailboxes" href="#">Только с ошибкой</a>
+      {# Дописать ящики в этот же проект, а не заводить новый на каждую партию. #}
+      <a class="button" href="{{ url_for('wizard.import_list', project_id=project_id) }}">
+        Добавить ящики
+      </a>
     </div>
   </div>
 

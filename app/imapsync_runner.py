@@ -224,6 +224,8 @@ class RunSpec:
     exclude_folders: tuple[str, ...] = ()
     max_message_bytes: int | None = None
     dry_run: bool = False
+    # Кэш выключен по умолчанию — как и у самого imapsync.
+    use_cache: bool = False
 
 
 @dataclass
@@ -576,9 +578,7 @@ class ImapsyncRun:
             # Размеры папок мы уже посчитали на фазе проверки — незачем платить
             # за это ещё раз в начале и в конце прогона.
             "--nofoldersizes", "--nofoldersizesatend",
-            # Кэш ускоряет повторные прогоны: без него каждый «досинхронить»
-            # заново вычитывает заголовки всего ящика.
-            "--usecache", "--tmpdir", str(_cache_dir(spec)),
+            "--tmpdir", str(_cache_dir(spec)),
             # Догадка о системных папках самим imapsync — поверх неё ниже идут
             # явные пары, посчитанные по нашим пресетам.
             "--automap",
@@ -587,6 +587,14 @@ class ImapsyncRun:
             "--timeout1", "300", "--timeout2", "300",
             "--nocheckfoldersexist",
         ]
+
+        if spec.use_cache:
+            # Ускоряет повторные прогоны, но кладёт файл на каждое письмо и
+            # растёт с каждым запуском. Включается осознанно, в настройках
+            # проекта, где рядом написано, чем это чревато.
+            command.append("--usecache")
+        else:
+            command.append("--nousecache")
 
         command += _security_flags(spec.src, "1")
         command += _security_flags(spec.dst, "2")

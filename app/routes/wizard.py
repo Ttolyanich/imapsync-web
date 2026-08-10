@@ -182,6 +182,9 @@ def mapping(project_id: int):
     with session_scope() as db:
         project = _editable(db, project_id)
         project_view = {"id": project.id, "name": project.name}
+        already = (
+            db.query(Mailbox).filter(Mailbox.project_id == project_id).count()
+        )
 
     table = _load_table(project_id)
     if table is None:
@@ -198,6 +201,7 @@ def mapping(project_id: int):
         mapping=guessed,
         preview=preview,
         fields=FIELDS,
+        already=already,
     )
 
 
@@ -238,17 +242,38 @@ def commit(project_id: int):
         flash("Импортировать нечего: во всех строках ошибки.", "error")
         return redirect(url_for("wizard.mapping", project_id=project_id))
 
+    # Дописать к существующему списку или заменить его целиком. Раньше выбора
+    # не было и импорт всегда заменял — из-за этого на каждую новую партию
+    # ящиков заводили отдельный проект, хотя клиент один.
+    append = request.form.get("import_mode") == "append"
+
     with session_scope() as db:
         project = _editable(db, project_id)
 
-        # Повторный импорт заменяет список целиком: смешивать старые и новые
-        # строки — верный способ получить проект, которому никто не доверяет.
-        removed = (
-            db.query(Mailbox).filter(Mailbox.project_id == project_id)
-            .delete(synchronize_session=False)
-        )
+        removed = 0
+        if not append:
+            removed = (
+                db.query(Mailbox).filter(Mailbox.project_id == project_id)
+                .delete(synchronize_session=False)
+            )
+            existing: set[str] = set()
+        else:
+            existing = {
+                email.casefold()
+                for (email,) in db.query(Mailbox.src_email)
+                .filter(Mailbox.project_id == project_id)
+                .all()
+            }
 
+        added = 0
+        duplicates = 0
         for row in importable:
+            if row.src_email.casefold() in existing:
+                # Такой ящик в проекте уже есть — молча плодить дубли нельзя.
+                duplicates += 1
+                continue
+            existing.add(row.src_email.casefold())
+            added += 1
             db.add(
                 Mailbox(
                     project_id=project_id,
@@ -267,12 +292,15 @@ def commit(project_id: int):
         skipped = result.total - len(importable)
         log_action(db, user=current_user(), action="mailboxes_imported",
                    target_type="project", target_id=project_id,
-                   details=f"{len(importable)} строк, пропущено {skipped}")
+                   details=(f"{'дописано' if append else 'загружено'} {added}, "
+                            f"с ошибками {skipped}, уже были {duplicates}"))
         log_event(
             db, project_id=project_id, code="import_committed",
             message=(
-                f"Импортировано {len(importable)} ящиков"
+                (f"К списку добавлено {added} ящиков" if append
+                 else f"Импортировано {added} ящиков")
                 + (f", пропущено с ошибками {skipped}" if skipped else "")
+                + (f", уже были в проекте {duplicates}" if duplicates else "")
                 + (f", прежний список ({removed}) заменён" if removed else "")
                 + "."
             ),
@@ -281,7 +309,11 @@ def commit(project_id: int):
     # Файл с паролями на диске больше не нужен.
     _clear_upload(project_id)
 
-    flash(f"Импортировано {len(importable)} ящиков. Теперь можно проверить доступы.", "ok")
+    message = (f"Добавлено {added} ящиков." if append
+               else f"Импортировано {added} ящиков.")
+    if duplicates:
+        message += f" Уже были в проекте: {duplicates}."
+    flash(message + " Теперь можно проверить доступы.", "ok")
     return redirect(url_for("projects.view", project_id=project_id))
 
 

@@ -610,6 +610,11 @@ def save_settings(project_id: int):
 
         project.migrate_trash = bool(request.form.get("migrate_trash"))
         project.migrate_spam = bool(request.form.get("migrate_spam"))
+        # Галка кэша живёт в отдельной форме. Без этой проверки сохранение
+        # остальных настроек молча выключало бы кэш, потому что в той форме
+        # поля нет вовсе.
+        if request.form.get("use_cache_form"):
+            project.use_cache = bool(request.form.get("use_cache"))
         project.unknown_folder_policy = request.form.get("unknown_folder_policy") or "create"
         project.unknown_folder_container = (
             request.form.get("unknown_folder_container") or ""

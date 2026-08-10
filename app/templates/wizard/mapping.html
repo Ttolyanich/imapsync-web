@@ -76,6 +76,35 @@
     </label>
   </div>
 
+  {% if already %}
+  {# В проекте уже есть ящики. Раньше выбора не было и импорт всегда заменял
+     список — поэтому на каждую новую партию заводили отдельный проект. #}
+  <div class="card">
+    <h3>Что сделать с уже загруженными ящиками</h3>
+    <p class="small muted">В проекте сейчас {{ already }} ящиков.</p>
+    <label style="display:flex;align-items:flex-start;gap:var(--space-2)">
+      <input type="radio" name="import_mode" value="append" checked style="width:auto;margin:3px 0 0">
+      <span style="color:var(--ink)">
+        <b>Добавить к списку</b>
+        <div class="muted small">
+          Ящики из файла допишутся к существующим. Те, что уже есть в проекте,
+          пропускаются — дубли не появятся.
+        </div>
+      </span>
+    </label>
+    <label style="display:flex;align-items:flex-start;gap:var(--space-2)">
+      <input type="radio" name="import_mode" value="replace" style="width:auto;margin:3px 0 0">
+      <span style="color:var(--ink)">
+        <b>Заменить список целиком</b>
+        <div class="muted small">
+          Прежние {{ already }} ящиков будут удалены вместе со своей историей
+          переноса и счётчиками.
+        </div>
+      </span>
+    </label>
+  </div>
+  {% endif %}
+
   <div id="preview">
     {% include "partials/import_preview.html" %}
   </div>

@@ -378,12 +378,30 @@
   <div class="card">
     <h3>Кэш imapsync</h3>
     <p class="small muted">
-      Кэш ускоряет повторные прогоны, но это <b>по файлу на каждое письмо</b>.
-      На больших проектах он исчерпывает inode-ы файловой системы, и тогда
-      перестаёт записываться вообще всё — со стороны это выглядит как
-      «на диске полно места, а ничего не работает». Терять кэш не страшно:
-      дубли он не предотвращает, письма сопоставляются по заголовкам.
+      Кэш ускоряет повторные прогоны, но это <b>по файлу на каждое письмо</b>,
+      и он растёт с каждым запуском. На боевом сервере он однажды занял миллион
+      файлов и исчерпал inode-ы файловой системы — записывать перестало вообще
+      всё, хотя на диске оставались гигабайты. У самого imapsync кэш выключен
+      по умолчанию, здесь тоже. Терять его не страшно: дубли он не
+      предотвращает, письма сопоставляются по заголовкам.
     </p>
+
+    <form method="post" action="{{ url_for('projects.save_settings', project_id=project.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="use_cache_form" value="1">
+      <input type="hidden" name="max_parallel" value="{{ project.max_parallel }}">
+      <input type="hidden" name="unknown_folder_policy" value="{{ project.unknown_folder_policy }}">
+      <input type="hidden" name="unknown_folder_container" value="{{ project.unknown_folder_container }}">
+      <input type="hidden" name="max_message_size_mb" value="{{ project.max_message_size_mb }}">
+      {% if project.migrate_trash %}<input type="hidden" name="migrate_trash" value="on">{% endif %}
+      {% if project.migrate_spam %}<input type="hidden" name="migrate_spam" value="on">{% endif %}
+      <label>
+        <input type="checkbox" name="use_cache" {{ 'checked' if project.use_cache }}
+               {{ 'disabled' if not can_edit }} onchange="this.form.submit()">
+        Использовать кэш для ускорения повторных прогонов
+        <span class="muted small">— включайте, только если следите за свободными inode-ами</span>
+      </label>
+    </form>
     <div class="stat-row" style="margin-bottom:var(--space-3)">
       <div>
         <b style="color:{{ 'var(--warn)' if cache.files > 200000 else 'var(--ink)' }}">

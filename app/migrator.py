@@ -188,14 +188,33 @@ class MigrationRunner:
     def _prepare(self):
         # Проверяем место до старта: иначе прогон «завершится» мгновенно,
         # оставив ящики в состоянии «идёт», а человек будет гадать почему.
-        problem = storage_problem()
-        if problem:
+        if storage_problem():
+            # Сначала пробуем разобраться сами: кэш завершённых и заброшенных
+            # проектов не нужен никому, а inode-ов занимает много.
+            freed = self._free_storage()
+            problem = storage_problem()
+            if problem:
+                with session_scope() as session:
+                    log_event(
+                        session, project_id=self.project_id, level="error",
+                        code="storage_exhausted",
+                        message=(
+                            f"Перенос не запущен: {problem}."
+                            + (f" Автоматически удалено {freed} файлов кэша, "
+                               "но этого не хватило." if freed else "")
+                        ),
+                    )
+                return None
+
             with session_scope() as session:
                 log_event(
-                    session, project_id=self.project_id, level="error",
-                    code="storage_exhausted", message=f"Перенос не запущен: {problem}.",
+                    session, project_id=self.project_id, level="warning",
+                    code="storage_freed",
+                    message=(
+                        f"Места на диске не хватало — автоматически удалён кэш "
+                        f"неактивных проектов ({freed} файлов). Перенос продолжается."
+                    ),
                 )
-            return None
 
         if not is_available():
             with session_scope() as session:
@@ -273,6 +292,16 @@ class MigrationRunner:
             )
 
         return selected, parallel
+
+    def _free_storage(self) -> int:
+        """Убрать кэш завершённых и заброшенных проектов, кроме текущего."""
+        from app.maintenance import purge_finished_caches
+
+        try:
+            return purge_finished_caches(skip_project_id=self.project_id)
+        except Exception:  # noqa: BLE001 — уборка не должна ронять прогон
+            log.exception("Не удалось освободить место автоматически")
+            return 0
 
     def _migrate_one(self, mailbox_id: int) -> None:
         """Обёртка, которая не даёт ящику залипнуть в состоянии «идёт».
@@ -432,6 +461,7 @@ class MigrationRunner:
                 exclude_folders=excludes,
                 max_message_bytes=(project.max_message_size_mb or 0) * 1024 * 1024 or None,
                 dry_run=self.dry_run,
+                use_cache=bool(project.use_cache),
             )
             self._baselines[mailbox_id] = (mailbox.done_messages, mailbox.done_bytes)
             totals = (

@@ -237,6 +237,28 @@ status, html, _ = post(f"/projects/{project_id}/settings", {
 check("настройки переноса сохранены", "Настройки сохранены" in html)
 check("лимит размера письма записан", 'value="35"' in html)
 
+# 12b. дописывание ящиков в тот же проект вместо заведения нового
+csv_more = (
+    "Почта откуда;Пароль откуда;Почта куда;Пароль куда;ФИО\r\n"
+    "ivanov@mail.ru;appPassX;ivanov@corp.local;Dst!X;Тот же Иванов\r\n"
+    "novikov@mail.ru;appPass9;novikov@corp.local;Dst!9;Новиков Новик\r\n"
+)
+status, html, url = post(
+    f"/wizard/{project_id}/import",
+    {"csrf_token": csrf(html), "mode": "file"},
+    files={"file": ("dopolnenie.csv", csv_more.encode("cp1251"))},
+)
+check("предложен выбор «добавить или заменить»", "Добавить к списку" in html)
+
+status, html, _ = post(f"/wizard/{project_id}/commit", {
+    "csrf_token": csrf(html), "import_mode": "append",
+    "col_src_email": "0", "col_src_password": "1",
+    "col_dst_email": "2", "col_dst_password": "3", "col_note": "4",
+})
+check("новый ящик дописан, а не заменил список", "Добавлено 1 ящиков" in html)
+check("уже существующий ящик не задвоился", "Уже были в проекте: 1" in html)
+check("прежние ящики на месте", "petrov@mail.ru" in html and "novikov@mail.ru" in html)
+
 # 13. папки, сверка, отчёт
 status, html, _ = get(f"/projects/{project_id}/folders")
 check("экран папок открывается", "Соответствие папок" in html)

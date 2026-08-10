@@ -93,7 +93,7 @@ def purge_idle_credentials() -> int:
     return purged
 
 
-def purge_finished_caches() -> int:
+def purge_finished_caches(skip_project_id: int | None = None) -> int:
     """Удалить кэш imapsync у завершённых и давно заброшенных проектов.
 
     Кэш — это по файлу на каждое письмо. На боевом сервере он однажды занял
@@ -114,7 +114,7 @@ def purge_finished_caches() -> int:
             )
             .all()
         )
-        candidates = [(p.id, p.name) for p in projects]
+        candidates = [(p.id, p.name) for p in projects if p.id != skip_project_id]
 
     for project_id, name in candidates:
         removed = purge_cache(project_id)

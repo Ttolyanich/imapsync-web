@@ -143,6 +143,12 @@ class Project(Base):
     # обрезать его нельзя, это была бы тихая потеря данных.
     max_message_size_mb: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    # Кэш imapsync ускоряет повторные прогоны, но создаёт файл на каждое письмо
+    # и растёт с каждым прогоном. На боевом сервере он однажды выбрал миллион
+    # inode-ов файловой системы. У самого imapsync он выключен по умолчанию —
+    # держим так же и включаем только осознанно.
+    use_cache: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=utcnow, onupdate=utcnow, nullable=False

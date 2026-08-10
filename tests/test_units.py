@@ -144,7 +144,17 @@ with tempfile.TemporaryDirectory() as tmp:
 joined = " ".join(cmd)
 check("пароля нет в командной строке", "СЕКРЕТ-1" in joined or "СЕКРЕТ-2" in joined, False)
 check("пароли переданы файлами", "--passfile1" in cmd and "--passfile2" in cmd, True)
-check("кэш включён", "--usecache" in cmd, True)
+check("кэш по умолчанию выключен", "--nousecache" in cmd, True)
+
+# А включённый кэш должен доезжать до команды.
+spec_cached = RunSpec(
+    mailbox_id=7, project_id=3, src=spec.src, dst=spec.dst, use_cache=True,
+)
+with tempfile.TemporaryDirectory() as tmp:
+    p1 = _Path(tmp) / "p1"; p1.write_text("x")
+    p2 = _Path(tmp) / "p2"; p2.write_text("x")
+    cached_cmd = ImapsyncRun(spec_cached)._build_command(p1, p2)
+check("включённый кэш попадает в команду", "--usecache" in cached_cmd, True)
 check("свой лог, без LOG_imapsync", "--nolog" in cmd, True)
 check("автомаппинг папок", "--automap" in cmd, True)
 check("явная пара папок", "Отправленные=Sent Items" in cmd, True)
