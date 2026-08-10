@@ -283,7 +283,31 @@ check("запас места измеряется без падения",
       free_bytes is None or free_bytes >= 0, True)
 
 print("\n--- коды возврата ---")
-from app.imapsync_runner import FATAL_EXITS, RETRIABLE_EXITS  # noqa: E402
+from app.imapsync_runner import (  # noqa: E402
+    FATAL_EXITS,
+    RETRIABLE_EXITS,
+    describe_exit,
+    exit_hint,
+    is_auth_exit,
+)
+
+# Коды, реально встреченные на боевом сервере 10.08.2026: 114 (67 раз),
+# 115, 117 и 161. Раньше человек видел «завершился с кодом 114».
+for code in (114, 115, 116, 117, 118, 119, 120, 121, 161, 162):
+    text = describe_exit(code)
+    check(f"код {code} расшифрован", "кодом" not in text, True)
+print(f"       114: {describe_exit(114)}")
+print(f"       161: {describe_exit(161)}")
+
+check("у частой ошибки есть подсказка", bool(exit_hint(114)), True)
+
+# 161 и 162 — тоже отказ в аутентификации, а не «просто ошибка». Повторять их
+# нельзя: в домене пять попыток до блокировки учётной записи.
+check("161 — это отказ аутентификации", is_auth_exit(161), True)
+check("162 — это отказ аутентификации", is_auth_exit(162), True)
+check("161 неповторяем", 161 in FATAL_EXITS, True)
+check("162 неповторяем", 162 in FATAL_EXITS, True)
+check("161 не в повторяемых", 161 in RETRIABLE_EXITS, False)
 
 check("ошибка пароля неповторяема", EXIT_AUTHENTICATION_FAILURE in FATAL_EXITS, True)
 check("ошибка пароля не в повторяемых",

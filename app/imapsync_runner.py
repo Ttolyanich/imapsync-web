@@ -40,15 +40,40 @@ IMAPSYNC_BIN = os.environ.get("IMAPSYNC_BIN", "imapsync")
 
 # --- коды возврата imapsync ------------------------------------------------
 
+# Значения взяты из исходника imapsync (константы EXIT_*), а не из общей
+# фразы «114–121 various errors» в документации.
 EXIT_OK = 0
+EXIT_CATCH_ALL = 1
+EXIT_BY_SIGNAL = 6
+EXIT_BY_FILE = 7
+EXIT_PID_FILE_ERROR = 8
 EXIT_CONNECTION_FAILURE = 10
 EXIT_TLS_FAILURE = 12
 EXIT_AUTHENTICATION_FAILURE = 16
+EXIT_SUBFOLDER1_NO_EXISTS = 21
 EXIT_CONNECTION_FAILURE_HOST1 = 101
 EXIT_CONNECTION_FAILURE_HOST2 = 102
 EXIT_WITH_ERRORS = 111
 EXIT_WITH_ERRORS_MAX = 112
 EXIT_OVERQUOTA = 113
+EXIT_ERR_APPEND = 114
+EXIT_ERR_FETCH = 115
+EXIT_ERR_CREATE = 116
+EXIT_ERR_SELECT = 117
+EXIT_TRANSFER_EXCEEDED = 118
+EXIT_ERR_APPEND_VIRUS = 119
+EXIT_ERR_FLAGS = 120
+EXIT_ERR_SEARCH = 121
+EXIT_AUTH_FAILURE_USER1 = 161
+EXIT_AUTH_FAILURE_USER2 = 162
+EXIT_TESTS_FAILED = 254
+
+# Коды, означающие отказ в аутентификации. Такой ящик нельзя пробовать снова
+# автоматически: в домене обычно пять неудачных попыток до блокировки учётки
+# на час, и повторные «Досинхронить» их сожгут.
+AUTH_EXITS = frozenset(
+    {EXIT_AUTHENTICATION_FAILURE, EXIT_AUTH_FAILURE_USER1, EXIT_AUTH_FAILURE_USER2}
+)
 
 # Повторять осмысленно: проблема снаружи и, скорее всего, временная.
 RETRIABLE_EXITS = frozenset(
@@ -62,19 +87,63 @@ RETRIABLE_EXITS = frozenset(
 
 # Повторять нельзя ни при каких обстоятельствах: следующая попытка только
 # приблизит блокировку учётной записи.
-FATAL_EXITS = frozenset({EXIT_AUTHENTICATION_FAILURE, EXIT_TLS_FAILURE, 64, 66})
+FATAL_EXITS = frozenset({EXIT_TLS_FAILURE, 64, 66}) | AUTH_EXITS
 
 EXIT_MESSAGES = {
     EXIT_OK: "перенос завершён",
+    EXIT_CATCH_ALL: "imapsync завершился с ошибкой",
+    EXIT_BY_SIGNAL: "процесс остановлен",
+    EXIT_BY_FILE: "остановлен стоп-файлом",
+    EXIT_PID_FILE_ERROR: "не удалось создать файл процесса",
     EXIT_CONNECTION_FAILURE: "не удалось подключиться",
     EXIT_CONNECTION_FAILURE_HOST1: "не удалось подключиться к источнику",
     EXIT_CONNECTION_FAILURE_HOST2: "не удалось подключиться к приёмнику",
     EXIT_TLS_FAILURE: "ошибка TLS",
     EXIT_AUTHENTICATION_FAILURE: "неверный логин или пароль",
+    EXIT_AUTH_FAILURE_USER1: "источник не принял логин или пароль",
+    EXIT_AUTH_FAILURE_USER2: "приёмник не принял логин или пароль",
+    EXIT_SUBFOLDER1_NO_EXISTS: "на источнике нет указанной папки",
     EXIT_WITH_ERRORS: "завершено, но часть писем не перенеслась",
     EXIT_WITH_ERRORS_MAX: "слишком много ошибок, прогон остановлен",
     EXIT_OVERQUOTA: "на приёмнике закончилось место",
-    6: "процесс остановлен",
+    EXIT_ERR_APPEND: "приёмник не принял часть писем",
+    EXIT_ERR_FETCH: "не удалось прочитать часть писем с источника",
+    EXIT_ERR_CREATE: "не удалось создать папку на приёмнике",
+    EXIT_ERR_SELECT: "не удалось открыть папку",
+    EXIT_TRANSFER_EXCEEDED: "достигнут заданный предел объёма переноса",
+    EXIT_ERR_APPEND_VIRUS: "приёмник отверг письмо как заражённое",
+    EXIT_ERR_FLAGS: "не удалось проставить флаги писем",
+    EXIT_ERR_SEARCH: "сервер не смог выполнить поиск по папке",
+    EXIT_TESTS_FAILED: "самопроверка imapsync не прошла",
+}
+
+# Что делать человеку — то, ради чего расшифровка и нужна.
+EXIT_HINTS = {
+    EXIT_ERR_APPEND: (
+        "Обычно причина в самих письмах или в приёмнике: письмо больше "
+        "разрешённого размера, битые заголовки, кончилась квота ящика или его "
+        "забраковал антивирус. Смотри подробный лог — там видно, какие именно "
+        "письма не приняты"
+    ),
+    EXIT_ERR_APPEND_VIRUS: (
+        "Антивирус на приёмнике забраковал письмо. Перенести его можно, только "
+        "сделав исключение в антивирусе на время миграции"
+    ),
+    EXIT_ERR_CREATE: (
+        "Проверь права учётной записи на приёмнике и имя папки: часть серверов "
+        "не разрешает создавать папки с некоторыми символами"
+    ),
+    EXIT_ERR_FETCH: (
+        "Источник не отдал часть писем. Бывает при повреждённых письмах и при "
+        "разрыве связи — повтори прогон и сравни, стало ли меньше"
+    ),
+    EXIT_OVERQUOTA: "Увеличь квоту ящика на приёмнике и запусти «Досинхронить»",
+    EXIT_AUTH_FAILURE_USER1: "Проверь пароль ящика на источнике",
+    EXIT_AUTH_FAILURE_USER2: "Проверь пароль ящика на приёмнике",
+    EXIT_WITH_ERRORS_MAX: (
+        "imapsync остановился, упёршись в предел числа ошибок. Причина ошибок "
+        "видна в подробном логе — сначала стоит устранить её"
+    ),
 }
 
 
@@ -82,6 +151,14 @@ def describe_exit(code: int | None) -> str:
     if code is None:
         return "прогон не завершён"
     return EXIT_MESSAGES.get(code, f"imapsync завершился с кодом {code}")
+
+
+def exit_hint(code: int | None) -> str | None:
+    return EXIT_HINTS.get(code) if code is not None else None
+
+
+def is_auth_exit(code: int | None) -> bool:
+    return code in AUTH_EXITS
 
 
 # --- разбор вывода ---------------------------------------------------------

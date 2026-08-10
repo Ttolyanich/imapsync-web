@@ -36,6 +36,8 @@ from app.imapsync_runner import (
     RunSpec,
     SideSpec,
     describe_exit,
+    exit_hint,
+    is_auth_exit,
     is_available,
 )
 from app.journal import log_event
@@ -520,8 +522,26 @@ class MigrationRunner:
                 message = f"{mailbox.src_email}: {note or describe_exit(result.exit_code)}"
                 level = "error"
                 code = "migrate_failed"
-                if result.exit_code == 113:
-                    message += " — увеличь квоту и запусти «Досинхронить»"
+
+                # Показываем и то, что всё-таки доехало: у части кодов (например,
+                # «приёмник не принял часть писем») прогон переносит почти всё,
+                # и человеку важно понимать масштаб, а не только факт отказа.
+                if result.summary_seen and not note:
+                    message += f" ({result.summary})"
+
+                hint = exit_hint(result.exit_code)
+                if hint:
+                    message += f". {hint}"
+
+                if is_auth_exit(result.exit_code):
+                    # Тот же предохранитель, что и на проверке доступов: в домене
+                    # обычно пять неудачных попыток до блокировки учётной записи,
+                    # и повторные «Досинхронить» их сожгут.
+                    mailbox.auth_locked = True
+                    message += (
+                        ". Повторные попытки для этого ящика заблокированы — "
+                        "исправь пароль и сними блокировку вручную"
+                    )
 
             log_event(session, project_id=self.project_id, mailbox_id=mailbox_id,
                       level=level, code=code, message=message)
