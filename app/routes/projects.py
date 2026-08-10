@@ -413,11 +413,17 @@ def mailbox_folders(project_id: int, mailbox_id: int):
             elif is_trash and not migrate_trash:
                 reason = "пропускается (корзина отключена в настройках проекта)"
 
-            parts = f.name_display.replace(".", "/").split("/")
-            depth = len(parts) - 1
-            leaf_name = parts[-1] if parts else f.name_display
-            parent_name = "/".join(parts[:-1]) if depth > 0 else None
-            has_children = any(n != f.name_display and (n.startswith(f.name_display + "/") or n.startswith(f.name_display + ".")) for n in all_names)
+            parts = f.name_display.split("/")
+            parent_name = None
+            depth = 0
+            if len(parts) > 1:
+                possible_parent = "/".join(parts[:-1])
+                if possible_parent in all_names:
+                    parent_name = possible_parent
+                    depth = len(parts) - 1
+
+            leaf_name = parts[-1] if depth > 0 else f.name_display
+            has_children = any(n != f.name_display and n.startswith(f.name_display + "/") for n in all_names)
 
             inventory.append({
                 "name": f.name_display,

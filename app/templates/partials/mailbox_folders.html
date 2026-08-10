@@ -42,7 +42,7 @@
                         var tbody = btn.closest('tbody');
                         tbody.querySelectorAll('tr').forEach(function(row) {
                           var p = row.getAttribute('data-parent-name');
-                          if (p && (p === target || p.startsWith(target + '/') || p.startsWith(target + '.'))) {
+                          if (p && (p === target || p.startsWith(target + '/'))) {
                             row.style.display = collapsed ? '' : 'none';
                           }
                         });
