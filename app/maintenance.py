@@ -15,10 +15,13 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import or_
+
 from app.config import CREDENTIALS_PURGE_DAYS, RAW_LOG_DIR, RAW_LOG_RETENTION_DAYS
 from app.db import session_scope
+from app.imapsync_runner import purge_cache
 from app.journal import log_event
-from app.models import Mailbox, Project
+from app.models import PROJECT_DONE, Mailbox, Project
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +39,7 @@ def _loop() -> None:
         try:
             purge_idle_credentials()
             purge_old_logs()
+            purge_finished_caches()
         except Exception:  # noqa: BLE001 — уборка не должна ронять приложение
             log.exception("Ошибка фоновой уборки")
         time.sleep(INTERVAL_SECONDS)
@@ -87,6 +91,47 @@ def purge_idle_credentials() -> int:
     if purged:
         log.info("Автоочистка паролей: обработано проектов — %s", purged)
     return purged
+
+
+def purge_finished_caches() -> int:
+    """Удалить кэш imapsync у завершённых и давно заброшенных проектов.
+
+    Кэш — это по файлу на каждое письмо. На боевом сервере он однажды занял
+    миллион файлов и исчерпал inode-ы файловой системы: место на диске было,
+    а записать не удавалось уже ничего. Завершённому проекту кэш не нужен.
+    """
+    threshold = datetime.now(timezone.utc) - timedelta(days=CREDENTIALS_PURGE_DAYS)
+    removed_total = 0
+
+    with session_scope() as session:
+        projects = (
+            session.query(Project)
+            .filter(
+                or_(
+                    Project.status == PROJECT_DONE,
+                    Project.last_activity_at < threshold.replace(tzinfo=None),
+                )
+            )
+            .all()
+        )
+        candidates = [(p.id, p.name) for p in projects]
+
+    for project_id, name in candidates:
+        removed = purge_cache(project_id)
+        if not removed:
+            continue
+        removed_total += removed
+        with session_scope() as session:
+            log_event(
+                session, project_id=project_id, code="cache_auto_purged",
+                message=(
+                    f"Кэш imapsync очищен автоматически: удалено {removed} файлов. "
+                    "Проект завершён или давно не использовался."
+                ),
+            )
+        log.info("Кэш проекта «%s» очищен: %s файлов", name, removed)
+
+    return removed_total
 
 
 def purge_old_logs() -> int:

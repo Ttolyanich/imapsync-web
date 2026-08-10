@@ -660,6 +660,53 @@ def _scrub(line: str, secrets: tuple[str, ...]) -> str:
     return re.sub(r"(LOGIN\s+\S+\s+)\S+", r"\1***", line, flags=re.IGNORECASE)
 
 
+def project_cache_dir(project_id: int) -> Path:
+    return IMAPSYNC_CACHE_DIR / f"project_{project_id}"
+
+
+def cache_usage(project_id: int) -> tuple[int, int]:
+    """Сколько файлов и байт занимает кэш проекта.
+
+    Число файлов важнее размера: imapsync кладёт в кэш по файлу на сообщение,
+    и на больших проектах он исчерпывает inode-ы файловой системы задолго до
+    того, как кончится место. Со стороны это выглядит как «диск наполовину
+    пуст, а запись не проходит».
+    """
+    folder = project_cache_dir(project_id)
+    if not folder.exists():
+        return 0, 0
+
+    files = 0
+    size = 0
+    for path in folder.rglob("*"):
+        try:
+            if path.is_file():
+                files += 1
+                size += path.stat().st_size
+        except OSError:
+            continue
+    return files, size
+
+
+def purge_cache(project_id: int) -> int:
+    """Удалить кэш проекта. Возвращает число удалённых файлов.
+
+    Терять его не страшно: кэш только ускоряет повторные прогоны, а дубли он
+    не предотвращает — сопоставление писем идёт по заголовкам.
+    """
+    folder = project_cache_dir(project_id)
+    if not folder.exists():
+        return 0
+
+    files, _ = cache_usage(project_id)
+    try:
+        shutil.rmtree(folder)
+    except OSError as exc:
+        log.warning("Не удалось удалить кэш проекта %s: %s", project_id, exc)
+        return 0
+    return files
+
+
 def _cache_dir(spec: RunSpec) -> Path:
     path = IMAPSYNC_CACHE_DIR / f"project_{spec.project_id}" / f"mailbox_{spec.mailbox_id}"
     path.mkdir(parents=True, exist_ok=True)

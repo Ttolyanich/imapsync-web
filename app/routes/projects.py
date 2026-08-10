@@ -26,8 +26,14 @@ from app.config import RAW_LOG_DIR
 from app.db import session_scope
 from app.errors import HINTS, human
 from app.folder_mapping import build_proposal, is_confirmed, save_mapping
-from app.imapsync_runner import describe_exit, read_log_tail
-from app.migrator import get_migration, start_migration, stop_migration
+from app.imapsync_runner import cache_usage, describe_exit, purge_cache, read_log_tail
+from app.migrator import (
+    get_migration,
+    start_migration,
+    stop_migration,
+    storage_headroom,
+    storage_problem,
+)
 from app.reconcile import build_report, get_reconcile, start_reconcile
 from app.journal import log_action, log_event
 from app.models import (
@@ -651,6 +657,34 @@ def purge_credentials(project_id: int):
     return redirect(url_for("projects.view", project_id=project_id, tab="settings"))
 
 
+@bp.post("/projects/<int:project_id>/cache/purge")
+@login_required
+def purge_project_cache(project_id: int):
+    """Удалить кэш imapsync этого проекта.
+
+    Кэш ускоряет повторные прогоны, но это по файлу на каждое письмо: на
+    больших проектах он исчерпывает inode-ы файловой системы, и тогда падает
+    вообще всё, что пишет на диск.
+    """
+    with session_scope() as db:
+        project = _get(db, project_id)
+        if not can_edit_project(project):
+            abort(403)
+
+    removed = purge_cache(project_id)
+
+    with session_scope() as db:
+        log_action(db, user=current_user(), action="cache_purged",
+                   target_type="project", target_id=project_id,
+                   details=f"{removed} файлов")
+        log_event(db, project_id=project_id, code="cache_purged",
+                  message=f"Кэш imapsync очищен: удалено {removed} файлов. "
+                          "Следующий прогон будет дольше обычного.")
+
+    flash(f"Кэш очищен, удалено {removed} файлов.", "ok")
+    return redirect(url_for("projects.view", project_id=project_id, tab="settings"))
+
+
 @bp.post("/projects/<int:project_id>/complete")
 @login_required
 def complete(project_id: int):
@@ -663,7 +697,16 @@ def complete(project_id: int):
                    target_type="project", target_id=project_id)
         log_event(db, project_id=project_id, code="project_completed",
                   message="Проект переведён в статус «завершён».")
-    flash("Проект завершён.", "ok")
+
+    # Кэш завершённому проекту не нужен, а места и inode-ов занимает много.
+    removed = purge_cache(project_id)
+    if removed:
+        with session_scope() as db:
+            log_event(db, project_id=project_id, code="cache_purged",
+                      message=f"Кэш imapsync очищен вместе с завершением проекта: "
+                              f"удалено {removed} файлов.")
+
+    flash("Проект завершён." + (f" Кэш очищен ({removed} файлов)." if removed else ""), "ok")
     return redirect(url_for("projects.view", project_id=project_id))
 
 
@@ -886,6 +929,8 @@ def _project_context(db, project: Project) -> dict:
     runner = get_check(project.id)
     migration = get_migration(project.id)
     rows, _, _, _ = _mailbox_rows(db, project.id, only_failed=False)
+    cache_files, cache_bytes = cache_usage(project.id)
+    free_bytes, free_inodes = storage_headroom()
 
     return {
         "project": {
@@ -910,6 +955,13 @@ def _project_context(db, project: Project) -> dict:
         "rows": rows,
         "progress": runner.progress if runner else None,
         "migration": migration.progress if migration else None,
+        "cache": {
+            "files": cache_files,
+            "bytes": cache_bytes,
+            "free_bytes": free_bytes,
+            "free_inodes": free_inodes,
+            "problem": storage_problem(),
+        },
         "can_edit": can_edit_project(project),
         # Предупреждение о нехватке места должно всплыть ДО старта переноса,
         # а не на четвёртом часу.

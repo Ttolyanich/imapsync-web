@@ -19,13 +19,16 @@
 
 from __future__ import annotations
 
+import errno
 import logging
+import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from app.config import DATA_DIR
 from app.crypto import decrypt
 from app.db import session_scope
 from app.imapsync_runner import (
@@ -183,6 +186,17 @@ class MigrationRunner:
         self._finish()
 
     def _prepare(self):
+        # Проверяем место до старта: иначе прогон «завершится» мгновенно,
+        # оставив ящики в состоянии «идёт», а человек будет гадать почему.
+        problem = storage_problem()
+        if problem:
+            with session_scope() as session:
+                log_event(
+                    session, project_id=self.project_id, level="error",
+                    code="storage_exhausted", message=f"Перенос не запущен: {problem}.",
+                )
+            return None
+
         if not is_available():
             with session_scope() as session:
                 log_event(
@@ -261,6 +275,43 @@ class MigrationRunner:
         return selected, parallel
 
     def _migrate_one(self, mailbox_id: int) -> None:
+        """Обёртка, которая не даёт ящику залипнуть в состоянии «идёт».
+
+        Раньше исключение внутри прогона (например, когда на диске сервера
+        кончились inode-ы и не создавался файл лога) улетало наверх уже после
+        того, как ящик пометили работающим. В итоге все ящики показывались
+        как «идёт» независимо от лимита параллельности, а прогон «завершался»
+        мгновенно, ничего не сделав.
+        """
+        try:
+            self._migrate_attempts(mailbox_id)
+        except Exception as exc:  # noqa: BLE001 — иначе статус останется «идёт»
+            log.exception("Перенос ящика %s прерван исключением", mailbox_id)
+            self._fail_unexpected(mailbox_id, exc)
+
+    def _fail_unexpected(self, mailbox_id: int, exc: BaseException) -> None:
+        with self._lock:
+            self._runs.pop(mailbox_id, None)
+            self.progress.active.pop(mailbox_id, None)
+
+        with session_scope() as session:
+            mailbox = session.get(Mailbox, mailbox_id)
+            if mailbox is None:
+                return
+            reason = _describe_environment_error(exc)
+            mailbox.status = MB_FAILED
+            mailbox.finished_at = datetime.now(timezone.utc)
+            mailbox.last_error = reason
+            mailbox.current_folder = None
+            log_event(
+                session, project_id=self.project_id, mailbox_id=mailbox_id,
+                level="error", code="migrate_crashed",
+                message=f"{mailbox.src_email}: {reason}",
+            )
+
+        self._account(done=False)
+
+    def _migrate_attempts(self, mailbox_id: int) -> None:
         if self._stop.is_set():
             return
 
@@ -581,6 +632,64 @@ def _side(endpoint: Endpoint, mailbox_login: str, secret: str | None) -> SideSpe
         login=login,
         secret=password,
     )
+
+
+MIN_FREE_BYTES = 200 * 1024 * 1024
+MIN_FREE_INODES = 5000
+
+
+def storage_headroom() -> tuple[int | None, int | None]:
+    """Сколько на диске свободно байт и inode-ов. None — если ФС не отвечает."""
+    if not hasattr(os, "statvfs"):  # Windows при локальной разработке
+        return None, None
+    try:
+        stat = os.statvfs(DATA_DIR)
+    except OSError:
+        return None, None
+    return stat.f_bavail * stat.f_frsize, stat.f_favail
+
+
+def storage_problem() -> str | None:
+    """Понятная причина, почему начинать прогон сейчас нельзя.
+
+    Проверяем не только байты, но и **inode-ы**: кэш imapsync — это по файлу
+    на сообщение, и он способен исчерпать их задолго до того, как кончится
+    место. Со стороны это выглядит как «на диске 8 ГБ свободно, а запись
+    не проходит».
+    """
+    free_bytes, free_inodes = storage_headroom()
+
+    if free_inodes is not None and free_inodes < MIN_FREE_INODES:
+        return (
+            f"На диске сервера почти не осталось inode-ов (свободно {free_inodes}). "
+            "Скорее всего их занял кэш imapsync — это по файлу на каждое письмо. "
+            "Очистите кэш проекта в настройках и запустите прогон заново"
+        )
+
+    if free_bytes is not None and free_bytes < MIN_FREE_BYTES:
+        return (
+            f"На диске сервера осталось меньше {MIN_FREE_BYTES // 1024 // 1024} МБ "
+            "свободного места — прогон не начат, чтобы не потерять логи и базу"
+        )
+
+    return None
+
+
+def _describe_environment_error(exc: BaseException) -> str:
+    """Перевести сбой окружения на человеческий язык."""
+    if isinstance(exc, OSError):
+        if exc.errno == errno.ENOSPC:
+            free_bytes, free_inodes = storage_headroom()
+            if free_inodes is not None and free_inodes < MIN_FREE_INODES:
+                return (
+                    "на диске сервера закончились inode-ы — их занял кэш imapsync "
+                    "(по файлу на каждое письмо). Очистите кэш проекта в настройках"
+                )
+            return "на диске сервера закончилось место"
+        if exc.errno == errno.EACCES:
+            return "нет прав на запись в каталог данных"
+        return f"сбой файловой системы: {exc.strerror or exc}"
+    return f"неожиданная ошибка: {exc.__class__.__name__}: {exc}"
 
 
 def _noop_note(result) -> str:

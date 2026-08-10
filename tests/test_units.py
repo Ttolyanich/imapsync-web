@@ -250,6 +250,28 @@ check("Черновики", encode_folder_name("Черновики"), "&BCcENQRA
 check("ASCII не трогаем", encode_folder_name("INBOX"), "INBOX")
 check("ASCII с пробелом не трогаем", encode_folder_name("Sent Items"), "Sent Items")
 
+print("\n--- сбои окружения ---")
+# Боевой случай 10.08.2026: кэш imapsync занял миллион файлов и исчерпал
+# inode-ы. Место на диске было (8,7 ГБ), а создать файл не удавалось.
+from app.migrator import _describe_environment_error, storage_headroom  # noqa: E402
+
+no_space = OSError(28, "No space left on device")
+no_space.errno = 28
+text = _describe_environment_error(no_space)
+check("кончилось место распознано", "диске сервера" in text, True)
+print(f"       текст для человека: {text}")
+
+denied = OSError(13, "Permission denied")
+denied.errno = 13
+check("нет прав распознано", "прав на запись" in _describe_environment_error(denied), True)
+
+check("любая ошибка получает текст",
+      bool(_describe_environment_error(ValueError("бум"))), True)
+
+free_bytes, free_inodes = storage_headroom()
+check("запас места измеряется без падения",
+      free_bytes is None or free_bytes >= 0, True)
+
 print("\n--- коды возврата ---")
 from app.imapsync_runner import FATAL_EXITS, RETRIABLE_EXITS  # noqa: E402
 

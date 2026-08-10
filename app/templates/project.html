@@ -376,6 +376,47 @@
 
   {% if can_edit %}
   <div class="card">
+    <h3>Кэш imapsync</h3>
+    <p class="small muted">
+      Кэш ускоряет повторные прогоны, но это <b>по файлу на каждое письмо</b>.
+      На больших проектах он исчерпывает inode-ы файловой системы, и тогда
+      перестаёт записываться вообще всё — со стороны это выглядит как
+      «на диске полно места, а ничего не работает». Терять кэш не страшно:
+      дубли он не предотвращает, письма сопоставляются по заголовкам.
+    </p>
+    <div class="stat-row" style="margin-bottom:var(--space-3)">
+      <div>
+        <b style="color:{{ 'var(--warn)' if cache.files > 200000 else 'var(--ink)' }}">
+          {{ cache.files | human_count }}</b>
+        <span class="muted">файлов в кэше</span>
+      </div>
+      <div><b>{{ cache.bytes | human_size }}</b><span class="muted">объём кэша</span></div>
+      {% if cache.free_inodes is not none %}
+        <div>
+          <b style="color:{{ 'var(--err)' if cache.free_inodes < 5000 else 'var(--ink)' }}">
+            {{ cache.free_inodes | human_count }}</b>
+          <span class="muted">свободных inode-ов</span>
+        </div>
+      {% endif %}
+      {% if cache.free_bytes is not none %}
+        <div><b>{{ cache.free_bytes | human_size }}</b><span class="muted">свободно на диске</span></div>
+      {% endif %}
+    </div>
+
+    {% if cache.problem %}
+      <div class="notice err small">{{ cache.problem }}.</div>
+    {% endif %}
+
+    {% if can_edit %}
+      <form method="post" action="{{ url_for('projects.purge_project_cache', project_id=project.id) }}"
+            onsubmit="return confirm('Очистить кэш? Следующий прогон будет дольше обычного, но письма не пострадают.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="actions"><button type="submit">Очистить кэш</button></div>
+      </form>
+    {% endif %}
+  </div>
+
+  <div class="card">
     <h3>Управление учетными данными</h3>
     <p class="small muted">
       После завершения переезда пароли рекомендуется стереть.
