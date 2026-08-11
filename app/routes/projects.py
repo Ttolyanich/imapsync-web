@@ -96,7 +96,7 @@ def view(project_id: int):
     selected_mailbox = request.args.get("mailbox", type=int)
     with session_scope() as db:
         project = _get(db, project_id)
-        context = _project_context(db, project)
+        context = _project_context(db, project, tab=tab)
     return render_template(
         "project.html", tab=tab, selected_mailbox=selected_mailbox, **context
     )
@@ -950,15 +950,32 @@ def _percent(done: int | None, total: int | None) -> int:
     return min(100, int(round(100 * (done or 0) / total)))
 
 
-def _project_context(db, project: Project) -> dict:
+def _project_context(db, project: Project, *, tab: str = "mailboxes") -> dict:
     src = db.get(Endpoint, project.src_endpoint_id) if project.src_endpoint_id else None
     dst = db.get(Endpoint, project.dst_endpoint_id) if project.dst_endpoint_id else None
     counts = _counts(db, project.id)
     runner = get_check(project.id)
     migration = get_migration(project.id)
-    rows, _, _, _ = _mailbox_rows(db, project.id, only_failed=False)
-    cache_files, cache_bytes = cache_usage(project.id)
-    free_bytes, free_inodes = storage_headroom()
+
+    rows = _mailbox_rows(db, project.id, only_failed=False)[0] if tab == "mailboxes" else []
+
+    if tab == "settings":
+        cache_files, cache_bytes = cache_usage(project.id)
+        free_bytes, free_inodes = storage_headroom()
+        problem = storage_problem()
+    else:
+        cache_files, cache_bytes, free_bytes, free_inodes, problem = 0, 0, None, None, None
+
+    quota_warnings = (
+        db.query(func.count(Mailbox.id))
+        .filter(
+            Mailbox.project_id == project.id,
+            Mailbox.total_bytes.isnot(None),
+            Mailbox.dst_quota_limit_bytes.isnot(None),
+            Mailbox.total_bytes > (Mailbox.dst_quota_limit_bytes - func.coalesce(Mailbox.dst_quota_used_bytes, 0)),
+        )
+        .scalar() or 0
+    )
 
     return {
         "project": {
@@ -989,10 +1006,8 @@ def _project_context(db, project: Project) -> dict:
             "bytes": cache_bytes,
             "free_bytes": free_bytes,
             "free_inodes": free_inodes,
-            "problem": storage_problem(),
+            "problem": problem,
         },
         "can_edit": can_edit_project(project),
-        # Предупреждение о нехватке места должно всплыть ДО старта переноса,
-        # а не на четвёртом часу.
-        "quota_warnings": sum(1 for r in rows if r["quota_warning"]),
+        "quota_warnings": quota_warnings,
     }

@@ -756,27 +756,36 @@ def project_cache_dir(project_id: int) -> Path:
     return IMAPSYNC_CACHE_DIR / f"project_{project_id}"
 
 
-def cache_usage(project_id: int) -> tuple[int, int]:
-    """Сколько файлов и байт занимает кэш проекта.
+_CACHE_USAGE_MEM: dict[int, tuple[float, int, int]] = {}
 
-    Число файлов важнее размера: imapsync кладёт в кэш по файлу на сообщение,
-    и на больших проектах он исчерпывает inode-ы файловой системы задолго до
-    того, как кончится место. Со стороны это выглядит как «диск наполовину
-    пуст, а запись не проходит».
-    """
+
+def cache_usage(project_id: int) -> tuple[int, int]:
+    """Сколько файлов и байт занимает кэш проекта (кешируется на 60 сек)."""
+    now = time.time()
+    if project_id in _CACHE_USAGE_MEM:
+        ts, files, size = _CACHE_USAGE_MEM[project_id]
+        if now - ts < 60.0:
+            return files, size
+
     folder = project_cache_dir(project_id)
     if not folder.exists():
+        _CACHE_USAGE_MEM[project_id] = (now, 0, 0)
         return 0, 0
 
     files = 0
     size = 0
-    for path in folder.rglob("*"):
-        try:
-            if path.is_file():
-                files += 1
-                size += path.stat().st_size
-        except OSError:
-            continue
+    try:
+        for root, dirs, filenames in os.walk(folder):
+            files += len(filenames)
+            for fname in filenames:
+                try:
+                    size += os.path.getsize(os.path.join(root, fname))
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
+    _CACHE_USAGE_MEM[project_id] = (now, files, size)
     return files, size
 
 
@@ -793,6 +802,7 @@ def purge_cache(project_id: int) -> int:
     files, _ = cache_usage(project_id)
     try:
         shutil.rmtree(folder)
+        _CACHE_USAGE_MEM.pop(project_id, None)
     except OSError as exc:
         log.warning("Не удалось удалить кэш проекта %s: %s", project_id, exc)
         return 0
