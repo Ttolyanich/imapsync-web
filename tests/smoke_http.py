@@ -269,6 +269,9 @@ status, html, _ = get(f"/projects/{project_id}?tab=report")
 check("вкладка отчёта открывается", "Сверка с приёмником" in html)
 check("на вкладке есть запуск сверки и выгрузка",
       f"/projects/{project_id}/reconcile" in html and "report.xlsx" in html)
+# Открывшаяся вкладка ещё не значит наполненную таблицу: однажды ящики
+# перестали доезжать до отчёта, а проверка «вкладка открывается» молчала.
+check("в таблице отчёта есть ящики", "petrov@mail.ru" in html and "Ящиков нет." not in html)
 
 status, html, _ = post(f"/projects/{project_id}/reconcile", {"csrf_token": csrf(html)})
 check("сверка запускается", "Сверка запущена" in html)
@@ -290,8 +293,11 @@ check("сброс своего пароля отклонён", "Свой пар�
 status, html, _ = post("/settings/users/1/toggle", {"csrf_token": csrf(html)})
 check("отключение самого себя отклонено", "Нельзя отключить самого себя" in html)
 
+# Имя уникальное на прогон: смоук гоняют по одной и той же базе разработки,
+# а второй «operator1» создать уже нельзя — проверка падала бы навсегда.
+operator_name = f"operator-{int(_time.time())}"
 status, html, _ = post("/settings/users", {
-    "csrf_token": csrf(html), "username": "operator1", "role": "operator", "password": "",
+    "csrf_token": csrf(html), "username": operator_name, "role": "operator", "password": "",
 })
 check("оператор создан с временным паролем", "Временный пароль" in html)
 operator_password = re.search(r"Временный пароль: (\S+)", html).group(1)
@@ -302,7 +308,7 @@ post("/logout", {"csrf_token": csrf(html)})
 
 status, html, _ = get("/login")
 status, html, _ = post("/login", {
-    "csrf_token": csrf(html), "username": "operator1", "password": operator_password,
+    "csrf_token": csrf(html), "username": operator_name, "password": operator_password,
 })
 check("оператор вошёл", "Проекты" in html)
 

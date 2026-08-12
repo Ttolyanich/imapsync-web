@@ -58,6 +58,10 @@ bp = Blueprint("projects", __name__)
 
 EVENTS_PAGE = 200
 
+# Отчёт о сверке выводится одной таблицей, без страниц: это документ, а не
+# рабочий список. Число здесь — не предел, а защита от запроса на миллион строк.
+REPORT_PAGE_SIZE = 10_000
+
 
 @bp.get("/")
 @login_required
@@ -957,7 +961,15 @@ def _project_context(db, project: Project, *, tab: str = "mailboxes") -> dict:
     runner = get_check(project.id)
     migration = get_migration(project.id)
 
-    rows = _mailbox_rows(db, project.id, only_failed=False)[0] if tab == "mailboxes" else []
+    # Ящики нужны двум вкладкам: обычной таблице и отчёту о сверке. Отчёт при
+    # этом показываем целиком — молча обрезанная на сотой строке таблица там
+    # хуже, чем длинная: её показывают заказчику как доказательство переезда.
+    if tab == "mailboxes":
+        rows = _mailbox_rows(db, project.id, only_failed=False)[0]
+    elif tab == "report":
+        rows = _mailbox_rows(db, project.id, only_failed=False, per_page=REPORT_PAGE_SIZE)[0]
+    else:
+        rows = []
 
     if tab == "settings":
         cache_files, cache_bytes = cache_usage(project.id)
